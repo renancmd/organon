@@ -1,11 +1,18 @@
-// app/page.tsx
-// This is the main component for the Home page of your application.
-// It has been updated to include an attachments section in the Daily Journal.
-// Built with Next.js (App Router), TypeScript, and Tailwind CSS.
+"use client";
 
-"use client"; // Required for useState
-
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
 import {
   Home,
   ListChecks,
@@ -14,26 +21,31 @@ import {
   GanttChart,
   CircleUserRound,
   Bell,
+  Check,
   Flame,
+  Minus,
+  Plus,
   X,
-  MapPin,
   Paperclip,
+  Edit,
+  Trash2,
 } from "lucide-react";
 
-// --- Start: Data Structures ---
+// --- ESTRUTURAS DE DADOS ---
+type Area = { id: string; name: string; color: string };
 type SubTask = { id: string; name: string; completed: boolean };
 type Attachment = { id: string; name: string; url: string };
 type Task = {
   id: string;
   name: string;
   description?: string;
-  dueDate?: string;
-  priority: "Baixa" | "Média" | "Alta";
+  date?: string;
+  time?: string;
+  priority: "Baixa" | "Média" | "Alta" | "Urgente";
   completed: boolean;
   subtasks: SubTask[];
   color: string;
   attachments?: Attachment[];
-  day: "today" | "tomorrow";
 };
 type Event = {
   id: string;
@@ -41,83 +53,28 @@ type Event = {
   date: string;
   startTime?: string;
   endTime?: string;
+  color: string;
   location?: string;
   recurrence?: "Nenhuma" | "Diário" | "Semanal" | "Mensal";
-  color: string;
   attachments?: Attachment[];
-  day: "today" | "tomorrow";
 };
-// --- End: Data Structures ---
+type Habit = {
+  id: string;
+  name: string;
+  type: "binario" | "quantitativo";
+  goal: number;
+  streak: number;
+  color: string;
+  dailyProgress?: { [date: string]: number };
+  duration?: number;
+};
+type JournalEntry = {
+  gratitude: string;
+  memory: string;
+  attachments?: Attachment[];
+};
 
-// --- Start: Mock Data ---
-const mockTasks: Task[] = [
-  {
-    id: "task-1",
-    name: "Finalize sales report",
-    description:
-      "Finish the Q2 sales report for the management meeting. Include charts for regional performance.",
-    dueDate: "2025-06-26T17:00:00",
-    priority: "Alta",
-    completed: false,
-    subtasks: [
-      { id: "sub-1-1", name: "Gather data from CRM", completed: true },
-      { id: "sub-1-2", name: "Create performance charts", completed: false },
-      { id: "sub-1-3", name: "Write summary and conclusion", completed: false },
-    ],
-    color: "bg-blue-500",
-    attachments: [{ id: "attach-1", name: "template_report.docx", url: "#" }],
-    day: "today",
-  },
-  {
-    id: "task-2",
-    name: "Schedule doctor's appointment",
-    description: "",
-    priority: "Média",
-    completed: false,
-    subtasks: [],
-    color: "bg-green-500",
-    day: "today",
-  },
-  {
-    id: "task-3",
-    name: "Buy groceries",
-    description: "Milk, Eggs, Bread, and Fruits.",
-    priority: "Baixa",
-    completed: false,
-    subtasks: [],
-    color: "bg-green-500",
-    day: "tomorrow",
-  },
-];
-
-const mockEvents: Event[] = [
-  {
-    id: "event-1",
-    name: "Project Meeting",
-    date: "2025-06-26",
-    startTime: "14:00",
-    endTime: "15:30",
-    location: "Conference Room 4",
-    recurrence: "Nenhuma",
-    color: "bg-red-500",
-    day: "today",
-  },
-  {
-    id: "event-2",
-    name: "Team Lunch",
-    date: "2025-06-27",
-    startTime: "12:30",
-    endTime: "13:30",
-    location: "Central Restaurant",
-    recurrence: "Nenhuma",
-    color: "bg-yellow-500",
-    day: "tomorrow",
-    attachments: [{ id: "attach-2", name: "menu.pdf", url: "#" }],
-  },
-];
-// --- End: Mock Data ---
-
-// --- Start: Mock shadcn/ui Components ---
+// --- COMPONENTES UI MOCK ---
 const Card = ({
   children,
   className = "",
@@ -126,30 +83,16 @@ const Card = ({
   className?: string;
 }) => (
   <div
-    className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
+    className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm flex flex-col ${className}`}
   >
     {children}
   </div>
 );
-const CardHeader = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => <div className={`p-6 ${className}`}>{children}</div>;
-const CardTitle = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <h3
-    className={`text-lg font-semibold leading-none tracking-tight text-gray-900 dark:text-gray-100 ${className}`}
-  >
-    {children}
-  </h3>
+const CardHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="p-6">{children}</div>
+);
+const CardTitle = ({ children }: { children: React.ReactNode }) => (
+  <h3 className="text-lg font-semibold">{children}</h3>
 );
 const CardContent = ({
   children,
@@ -157,47 +100,39 @@ const CardContent = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <div className={`p-6 pt-0 ${className}`}>{children}</div>;
-const CardFooter = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <div className={`flex items-center p-6 pt-0 ${className}`}>{children}</div>
+}) => <div className={`p-6 pt-0 flex-1 ${className}`}>{children}</div>;
+const CardFooter = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex items-center p-6 pt-0">{children}</div>
 );
-
 const Button = ({
   children,
   className = "",
-  variant = "default",
-  size = "default",
+  ...props
 }: {
   children: React.ReactNode;
   className?: string;
-  variant?: "default" | "ghost" | "outline";
-  size?: "default" | "icon";
+  [key: string]: any;
 }) => {
-  const baseClasses =
-    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:opacity-50 disabled:pointer-events-none";
-  const variantClasses = {
+  const base =
+    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
+  const variants = {
     default:
-      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-200",
+      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
     ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
-    outline:
-      "border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
+    outline: "border border-gray-200 dark:border-gray-700",
   };
-  const sizeClasses = { default: "h-10 py-2 px-4", icon: "h-10 w-10" };
+  const sizes = { default: "h-10 px-4 py-2", icon: "h-9 w-9" };
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`${base} ${variants[props.variant || "default"]} ${
+        sizes[props.size || "default"]
+      } ${className}`}
+      {...props}
     >
       {children}
     </button>
   );
 };
-
 const Checkbox = ({
   id,
   checked,
@@ -205,75 +140,67 @@ const Checkbox = ({
 }: {
   id: string;
   checked?: boolean;
-  onChange?: () => void;
+  onChange?: (checked: boolean) => void;
 }) => (
-  <div className="flex items-center">
-    {" "}
+  <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
     <input
       id={id}
       type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      className="h-4 w-4 shrink-0 rounded-sm border border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:border-gray-600"
-    />{" "}
+      checked={!!checked}
+      onChange={(e) => onChange?.(e.target.checked)}
+      className="h-4 w-4 shrink-0 rounded-sm border-gray-300"
+    />
   </div>
-);
-const Input = ({
-  className = "",
-  type = "text",
-  placeholder = "",
-  value,
-  onChange,
-}: {
-  className?: string;
-  type?: string;
-  placeholder?: string;
-  value?: string | number;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) => (
-  <input
-    type={type}
-    placeholder={placeholder}
-    value={value}
-    onChange={onChange}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:placeholder:text-gray-400 ${className}`}
-  />
 );
 const Textarea = ({
   className = "",
-  placeholder = "",
-  value,
-  onChange,
+  ...props
 }: {
   className?: string;
-  placeholder?: string;
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  [key: string]: any;
 }) => (
   <textarea
-    placeholder={placeholder}
-    value={value}
-    onChange={onChange}
-    className={`flex min-h-[80px] w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:placeholder:text-gray-400 ${className}`}
+    className={`flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm ${className}`}
+    {...props}
   />
 );
 const Label = ({
   children,
-  htmlFor,
+  ...props
 }: {
   children: React.ReactNode;
-  htmlFor: string;
+  [key: string]: any;
 }) => (
-  <label
-    htmlFor={htmlFor}
-    className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
+  <label className="text-sm font-medium" {...props}>
+    {children}
+  </label>
+);
+const Input = ({ className = "", ...props }: { [key: string]: any }) => (
+  <input
+    {...props}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+  />
+);
+const Select = ({
+  children,
+  ...props
+}: {
+  children: React.ReactNode;
+  [key: string]: any;
+}) => (
+  <select
+    {...props}
+    className="h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800"
   >
     {" "}
     {children}{" "}
-  </label>
+  </select>
+);
+const Tabs = ({ children }: { children: React.ReactNode }) => (
+  <div>{children}</div>
 );
 const TabsList = ({ children }: { children: React.ReactNode }) => (
-  <div className="inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+  <div className="inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 dark:bg-gray-800">
     {children}
   </div>
 );
@@ -288,642 +215,663 @@ const TabsTrigger = ({
 }) => (
   <button
     onClick={onClick}
-    className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:pointer-events-none disabled:opacity-50 ${
-      isActive
-        ? "bg-white text-gray-900 shadow-sm dark:bg-gray-950 dark:text-gray-50"
-        : ""
+    className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+      isActive ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
     }`}
   >
-    {" "}
-    {children}{" "}
+    {children}
   </button>
 );
-const Select = ({
-  children,
-  value,
-  onChange,
-}: {
-  children: React.ReactNode;
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-}) => (
-  <select
-    value={value}
-    onChange={onChange}
-    className="h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:border-gray-800"
-  >
-    {" "}
-    {children}{" "}
-  </select>
+const TabsContent = ({ children }: { children: React.ReactNode }) => (
+  <div className="mt-4">{children}</div>
 );
-// --- End: Mock shadcn/ui Components ---
 
-// --- Start: Task Detail Modal Component ---
-function TaskDetailModal({
+// --- MODAIS COMPLETOS ---
+const TaskDetailModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
   task,
-  isOpen,
-  onClose,
+  areas,
 }: {
-  task: Task | null;
   isOpen: boolean;
   onClose: () => void;
-}) {
-  if (!isOpen || !task) return null;
+  onSave: (task: Partial<Task>) => void;
+  onDelete: (taskId: string) => void;
+  task: Partial<Task> | null;
+  areas: Area[];
+}) => {
+  const [currentTask, setCurrentTask] = useState<Partial<Task> | null>(task);
+  useEffect(() => {
+    setCurrentTask(task);
+  }, [task]);
+  if (!isOpen || !currentTask) return null;
+  const handleSave = () => {
+    onSave(currentTask);
+    onClose();
+  };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-lg m-4">
-        <div className="flex items-start justify-between p-6 border-b dark:border-gray-800">
-          <div className="w-full flex items-center gap-4">
-            <Checkbox id={`modal-status-${task.id}`} />
-            <Input
-              value={task.name}
-              className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0"
-            />
-          </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Editar Tarefa</h3>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
             className="rounded-full"
           >
-            <X className="h-5 w-5" />
+            <X />
           </Button>
         </div>
-        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              placeholder="Adicionar detalhes, links e anotações..."
-              value={task.description}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Data de Vencimento</Label>
-              <Input
-                id="dueDate"
-                type="datetime-local"
-                value={
-                  task.dueDate
-                    ? new Date(task.dueDate).toISOString().slice(0, 16)
-                    : ""
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="priority">Prioridade</Label>
-              <Select id="priority" value={task.priority}>
-                <option>Baixa</option>
-                <option>Média</option>
-                <option>Alta</option>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Código de Cores</Label>
-            <div className="flex gap-2 pt-2">
-              {[
-                "bg-blue-500",
-                "bg-green-500",
-                "bg-purple-500",
-                "bg-yellow-500",
-                "bg-red-500",
-              ].map((color) => (
-                <button
-                  key={color}
-                  className={`w-8 h-8 rounded-full ${color} ${
-                    task.color === color
-                      ? "ring-2 ring-offset-2 ring-gray-900 dark:ring-offset-gray-900 dark:ring-white"
-                      : ""
-                  }`}
-                ></button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <Label>Sub-tarefas</Label>
-            <div className="space-y-3">
-              {task.subtasks.map((sub) => (
-                <div
-                  key={sub.id}
-                  className="flex items-center gap-3 p-2 rounded-md bg-gray-50 dark:bg-gray-800/50"
-                >
-                  <Checkbox id={sub.id} checked={sub.completed} />
-                  <Input
-                    value={sub.name}
-                    className="border-none p-0 h-auto text-sm focus-visible:ring-0 bg-transparent"
-                  />
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" size="default" className="w-full text-sm">
-              Adicionar sub-tarefa
-            </Button>
-          </div>
-          <div className="space-y-3">
-            <Label>Anexos</Label>
-            <div className="flex flex-wrap gap-2">
-              {task.attachments?.map((file) => (
-                <a
-                  href={file.url}
-                  key={file.id}
-                  className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full"
-                >
-                  <Paperclip className="h-4 w-4" /> {file.name}
-                </a>
-              ))}
-            </div>
-            <Button variant="outline" size="default" className="w-full text-sm">
-              Adicionar anexo
-            </Button>
-          </div>
+        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <Input
+            value={currentTask.name || ""}
+            onChange={(e) =>
+              setCurrentTask({ ...currentTask, name: e.target.value })
+            }
+          />
+          <Textarea
+            value={currentTask.description || ""}
+            onChange={(e) =>
+              setCurrentTask({ ...currentTask, description: e.target.value })
+            }
+          />
+        </div>
+        <div className="p-4 flex justify-between items-center border-t">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(currentTask.id!)}
+          >
+            <Trash2 className="w-4 h-4 text-red-500" />
+          </Button>
+          <Button onClick={handleSave}>Salvar</Button>
         </div>
       </div>
     </div>
   );
-}
-// --- End: Task Detail Modal Component ---
-
-// --- Start: Event Detail Modal Component ---
-function EventDetailModal({
+};
+const EventDetailModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
   event,
-  isOpen,
-  onClose,
 }: {
-  event: Event | null;
   isOpen: boolean;
   onClose: () => void;
-}) {
-  if (!isOpen || !event) return null;
+  onSave: (event: Partial<Event>) => void;
+  onDelete: (eventId: string) => void;
+  event: Partial<Event> | null;
+}) => {
+  const [currentEvent, setCurrentEvent] = useState(event);
+  useEffect(() => {
+    setCurrentEvent(event);
+  }, [event]);
+  if (!isOpen || !currentEvent) return null;
+  const handleSave = () => {
+    onSave(currentEvent);
+    onClose();
+  };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-lg m-4">
-        <div className="flex items-start justify-between p-6 border-b dark:border-gray-800">
-          <div className="w-full flex items-center gap-4">
-            <div className={`w-4 h-4 rounded-full ${event.color}`}></div>
-            <Input
-              value={event.name}
-              className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0"
-            />
-          </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative z-50 w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Editar Evento</h3>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
             className="rounded-full"
           >
-            <X className="h-5 w-5" />
+            <X />
           </Button>
         </div>
-        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="eventDate">Data</Label>
-              <Input id="eventDate" type="date" value={event.date} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="recurrence">Recorrência</Label>
-              <Select id="recurrence" value={event.recurrence}>
-                <option>Nenhuma</option>
-                <option>Diário</option>
-                <option>Semanal</option>
-                <option>Mensal</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Hora de Início</Label>
-              <Input id="startTime" type="time" value={event.startTime} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">Hora de Fim</Label>
-              <Input id="endTime" type="time" value={event.endTime} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="location">Localização</Label>
-            <Input
-              id="location"
-              type="text"
-              value={event.location}
-              placeholder="Adicionar localização"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Código de Cores</Label>
-            <div className="flex gap-2 pt-2">
-              {[
-                "bg-red-500",
-                "bg-blue-500",
-                "bg-green-500",
-                "bg-yellow-500",
-                "bg-purple-500",
-              ].map((color) => (
-                <button
-                  key={color}
-                  className={`w-8 h-8 rounded-full ${color} ${
-                    event.color === color
-                      ? "ring-2 ring-offset-2 ring-gray-900 dark:ring-offset-gray-900 dark:ring-white"
-                      : ""
-                  }`}
-                ></button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-3">
-            <Label>Anexos</Label>
-            <div className="flex flex-wrap gap-2">
-              {event.attachments?.map((file) => (
-                <a
-                  href={file.url}
-                  key={file.id}
-                  className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full"
-                >
-                  <Paperclip className="h-4 w-4" /> {file.name}
-                </a>
-              ))}
-            </div>
-            <Button variant="outline" size="default" className="w-full text-sm">
-              Adicionar anexo
-            </Button>
-          </div>
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          <Input
+            value={currentEvent.name || ""}
+            onChange={(e) =>
+              setCurrentEvent({ ...currentEvent, name: e.target.value })
+            }
+          />
+        </div>
+        <div className="p-4 flex justify-between items-center border-t">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(currentEvent.id!)}
+          >
+            <Trash2 className="w-4 h-4 text-red-500" />
+          </Button>
+          <Button onClick={handleSave}>Salvar</Button>
         </div>
       </div>
     </div>
   );
-}
-// --- End: Event Detail Modal Component ---
+};
 
-/**
- * Sidebar Component
- */
+// --- COMPONENTES DO DASHBOARD ---
 function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r bg-white dark:bg-gray-950 dark:border-gray-800 md:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <a
           href="/"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900 md:h-8 md:w-8 md:text-base"
+          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900"
           title="Organon"
         >
           <span className="text-xl">O</span>
         </a>
         <a
           href="/"
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-900 dark:bg-gray-800"
         >
           <Home className="h-5 w-5" />
         </a>
         <a
           href="/tasks"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <ListChecks className="h-5 w-5" />
         </a>
         <a
-          href="/schedule"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+          href="/agenda"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <CalendarDays className="h-5 w-5" />
         </a>
         <a
-          href="/habits"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+          href="/habitos"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <Repeat className="h-5 w-5" />
         </a>
         <a
           href="/daily-journal"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <GanttChart className="h-5 w-5" />
+        </a>
+      </nav>
+      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+        <a
+          href="/perfil"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
+        >
+          <CircleUserRound className="h-5 w-5" />
         </a>
       </nav>
     </aside>
   );
 }
 
-/**
- * Day Summary Module
- */
-function DailySummaryCard() {
+const DailySummaryCard = ({
+  tasks,
+  events,
+  onTaskClick,
+  onEventClick,
+  onUpdateTask,
+}: {
+  tasks: Task[];
+  events: Event[];
+  onTaskClick: (t: Task) => void;
+  onEventClick: (e: Event) => void;
+  onUpdateTask: (t: Task) => void;
+}) => {
   const [activeTab, setActiveTab] = useState<
     "today" | "tomorrow" | "next7days"
   >("today");
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
-  const handleTaskClick = (task: Task) => setSelectedTask(task);
-  const handleEventClick = (event: Event) => setSelectedEvent(event);
+  const filteredData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const sevenDaysFromNow = new Date(today);
+    sevenDaysFromNow.setDate(today.getDate() + 7);
+    const todayStr = today.toISOString().split("T")[0];
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-  const renderContent = () => {
-    const tasksForTab = mockTasks.filter((t) => t.day === activeTab);
-    const eventsForTab = mockEvents.filter((e) => e.day === activeTab);
-
-    if (activeTab === "next7days") {
-      return (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Overview of tasks and events for the upcoming week.
-        </p>
-      );
+    switch (activeTab) {
+      case "today":
+        return {
+          tasks: tasks.filter((t) => t.date === todayStr && !t.completed),
+          events: events.filter((e) => e.date === todayStr),
+          isRange: false,
+        };
+      case "tomorrow":
+        return {
+          tasks: tasks.filter((t) => t.date === tomorrowStr && !t.completed),
+          events: events.filter((e) => e.date === tomorrowStr),
+          isRange: false,
+        };
+      case "next7days":
+        return {
+          tasks: tasks.filter((t) => {
+            const d = t.date ? new Date(t.date + "T00:00:00") : null;
+            return d && d >= today && d <= sevenDaysFromNow && !t.completed;
+          }),
+          events: events.filter((e) => {
+            const d = new Date(e.date + "T00:00:00");
+            return d >= today && d <= sevenDaysFromNow;
+          }),
+          isRange: true,
+        };
+      default:
+        return { tasks: [], events: [], isRange: false };
     }
+  }, [activeTab, tasks, events]);
 
-    return (
-      <div className="space-y-4">
-        <div>
-          <h4 className="font-medium text-gray-800 dark:text-gray-200">
-            Tasks
-          </h4>
-          <div className="mt-2 space-y-2">
-            {tasksForTab.map((task) => (
-              <div
-                key={task.id}
-                onClick={() => handleTaskClick(task)}
-                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 cursor-pointer"
-              >
-                <Checkbox id={task.id} />
-                <div
-                  className={`w-2 h-2 rounded-full ${task.color} shrink-0`}
-                ></div>
-                <label
-                  htmlFor={task.id}
-                  className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
-                >
-                  {task.name}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="pt-2">
-          <h4 className="font-medium text-gray-800 dark:text-gray-200">
-            Events
-          </h4>
-          <div className="mt-2 space-y-2">
-            {eventsForTab.map((event) => (
-              <div
-                key={event.id}
-                onClick={() => handleEventClick(event)}
-                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 cursor-pointer"
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${event.color} shrink-0`}
-                ></div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                  {event.name} - {event.startTime}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const formatDateForTab = (dateString: string) =>
+    new Date(dateString + "T00:00:00").toLocaleDateString("pt-BR", {
+      weekday: "short",
+      day: "numeric",
+    });
 
   return (
-    <>
-      <TaskDetailModal
-        task={selectedTask}
-        isOpen={!!selectedTask}
-        onClose={() => setSelectedTask(null)}
-      />
-      <EventDetailModal
-        event={selectedEvent}
-        isOpen={!!selectedEvent}
-        onClose={() => setSelectedEvent(null)}
-      />
-      <Card className="col-span-1 lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Day Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle>Resumo do Dia</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs>
           <TabsList>
             <TabsTrigger
               onClick={() => setActiveTab("today")}
               isActive={activeTab === "today"}
             >
-              Today
+              Hoje
             </TabsTrigger>
             <TabsTrigger
               onClick={() => setActiveTab("tomorrow")}
               isActive={activeTab === "tomorrow"}
             >
-              Tomorrow
+              Amanhã
             </TabsTrigger>
             <TabsTrigger
               onClick={() => setActiveTab("next7days")}
               isActive={activeTab === "next7days"}
             >
-              Next 7 Days
+              Próximos 7 Dias
             </TabsTrigger>
           </TabsList>
-          <div className="mt-4">{renderContent()}</div>
-        </CardContent>
-      </Card>
-    </>
+          <TabsContent>
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm pt-2">Tarefas</h4>
+              {filteredData.tasks.length > 0 ? (
+                filteredData.tasks.map((task) => (
+                  <div key={task.id} className="flex items-center gap-3">
+                    <Checkbox
+                      id={task.id}
+                      checked={task.completed}
+                      onChange={(c) => onUpdateTask({ ...task, completed: c })}
+                    />
+                    <div
+                      className={`w-2 h-2 rounded-full ${task.color} shrink-0`}
+                    ></div>
+                    <Label
+                      htmlFor={task.id}
+                      className="cursor-pointer"
+                      onClick={() => onTaskClick(task)}
+                    >
+                      {task.name}
+                    </Label>
+                    {filteredData.isRange && (
+                      <span className="ml-auto text-xs text-gray-500">
+                        {formatDateForTab(task.date!)}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Nenhuma tarefa para este período.
+                </p>
+              )}
+              <h4 className="font-medium text-sm pt-4">Eventos</h4>
+              {filteredData.events.length > 0 ? (
+                filteredData.events.map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={() => onEventClick(event)}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        event.color || "bg-red-500"
+                      } shrink-0`}
+                    ></div>
+                    <p className="text-sm">
+                      {event.startTime} - {event.name}
+                    </p>
+                    {filteredData.isRange && (
+                      <span className="ml-auto text-xs text-gray-500">
+                        {formatDateForTab(event.date!)}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Nenhum evento para este período.
+                </p>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
-}
+};
 
-/**
- * Daily Journal Module - Updated with Attachments
- */
-function JournalCard() {
-  const journalAttachments: Attachment[] = [
-    { id: "journal-attach-1", name: "foto_do_dia.jpg", url: "#" },
-  ];
-
+const JournalCard = ({
+  onSave,
+  initialEntry,
+}: {
+  onSave: (entry: JournalEntry) => void;
+  initialEntry: JournalEntry;
+}) => {
+  const [entry, setEntry] = useState(initialEntry);
+  useEffect(() => {
+    setEntry(initialEntry);
+  }, [initialEntry]);
   return (
-    <Card className="col-span-1 flex flex-col">
+    <Card>
       <CardHeader>
-        <CardTitle>Daily Journal</CardTitle>
+        <CardTitle>Registro do Dia</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 flex-grow">
+      <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="gratitude">What are you grateful for today?</Label>
+          <Label>Pelo que você é grato hoje?</Label>
           <Textarea
-            id="gratitude"
-            placeholder="Write something that made you smile..."
+            placeholder="Escreva aqui..."
+            value={entry.gratitude}
+            onChange={(e) => setEntry({ ...entry, gratitude: e.target.value })}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="memory">What memory do you want to cherish?</Label>
-          <Textarea id="memory" placeholder="Describe a special moment..." />
+          <Label>Qual memória você quer guardar?</Label>
+          <Textarea
+            placeholder="Escreva aqui..."
+            value={entry.memory}
+            onChange={(e) => setEntry({ ...entry, memory: e.target.value })}
+          />
         </div>
-        {/* Attachments Section */}
-        <div className="space-y-3 pt-2">
+        <div className="space-y-2">
           <Label>Anexos</Label>
-          <div className="flex flex-wrap gap-2">
-            {journalAttachments.map((file) => (
-              <a
-                href={file.url}
-                key={file.id}
-                className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Paperclip className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-gray-800 dark:text-gray-200">
-                  {file.name}
-                </span>
-              </a>
-            ))}
-          </div>
-          <Button variant="outline" size="default" className="w-full text-sm">
-            <Paperclip className="h-4 w-4 mr-2" />
-            Adicionar anexo
+          <Button variant="outline" className="w-full text-sm font-normal">
+            <Paperclip className="w-4 h-4 mr-2" />
+            Adicionar Anexo
           </Button>
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full">Save Entry</Button>
+        <Button className="w-full" onClick={() => onSave(entry)}>
+          Salvar Registro
+        </Button>
       </CardFooter>
     </Card>
   );
-}
-
-// --- Start: New Ring Input Component for Habits ---
-const RingInput = ({
-  progress,
-  total,
-  onProgressChange,
-  size = 60,
-  stroke = 4,
-}: {
-  progress: number;
-  total: number;
-  onProgressChange: (newProgress: number) => void;
-  size?: number;
-  stroke?: number;
-}) => {
-  const radius = size / 2 - stroke * 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / total) * circumference;
-
-  const handleClick = () => {
-    const newProgress = (progress + 1) % (total + 1);
-    onProgressChange(newProgress);
-  };
-
-  const isComplete = progress === total;
-
-  return (
-    <div
-      className="relative flex items-center justify-center cursor-pointer"
-      style={{ width: size, height: size }}
-      onClick={handleClick}
-    >
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          className="text-gray-200 dark:text-gray-700"
-          strokeWidth={stroke}
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-        <circle
-          className={`transition-all duration-300 ${
-            isComplete ? "text-green-500" : "text-blue-500"
-          }`}
-          strokeWidth={stroke}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-          style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
-        />
-      </svg>
-      <div className="absolute flex items-center justify-center">
-        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-          {progress}/{total}
-        </span>
-      </div>
-    </div>
-  );
 };
-// --- End: New Ring Input Component ---
 
-/**
- * Habits Tracker Module - With New Ring Input
- */
-function HabitsPanelCard() {
-  const [waterProgress, setWaterProgress] = useState(1);
-  const waterGoal = 4;
+const HabitsPanelCard = ({
+  habits,
+  onUpdateProgress,
+}: {
+  habits: Habit[];
+  onUpdateProgress: (habit: Habit, amount: number) => void;
+}) => {
+  const activeHabits = habits.filter(
+    (h) => h.streak < (h.duration || Infinity)
+  );
+  const todayStr = new Date().toISOString().split("T")[0];
 
   return (
-    <Card className="col-span-1 lg:col-span-3">
+    <Card className="lg:col-span-3">
       <CardHeader>
-        <CardTitle>Habits Tracker</CardTitle>
+        <CardTitle>Painel de Hábitos</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {/* Hábito Binário */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-800 dark:text-gray-200">
-              Make bed
-            </p>
-            <p className="flex items-center text-sm text-orange-500">
-              <Flame className="w-4 h-4 mr-1" /> 15 dias
-            </p>
-          </div>
-          <Checkbox id="habit1" />
-        </div>
-        {/* Hábito Quantitativo (Água) com Anel */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-800 dark:text-gray-200">
-              Drink water
-            </p>
-            <p className="flex items-center text-sm text-orange-500">
-              <Flame className="w-4 h-4 mr-1" /> 5 dias
-            </p>
-          </div>
-          <RingInput
-            progress={waterProgress}
-            total={waterGoal}
-            onProgressChange={setWaterProgress}
-          />
-        </div>
+        {activeHabits.length > 0 ? (
+          activeHabits.map((habit) => {
+            const progress = habit.dailyProgress?.[todayStr] || 0;
+            return (
+              <div
+                key={habit.id}
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium">{habit.name}</p>
+                  <p className="flex items-center text-sm text-orange-500">
+                    <Flame className="w-4 h-4 mr-1" /> {habit.streak} dias
+                  </p>
+                </div>
+                {habit.type === "binario" ? (
+                  <Checkbox
+                    id={`h-${habit.id}`}
+                    checked={progress >= 1}
+                    onChange={(c) => onUpdateProgress(habit, c ? 1 : 0)}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      onClick={() => onUpdateProgress(habit, -1)}
+                    >
+                      <Minus />
+                    </Button>
+                    <span className="font-bold text-base w-12 text-center">
+                      {progress}/{habit.goal}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      onClick={() => onUpdateProgress(habit, 1)}
+                    >
+                      <Plus />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <p className="text-sm text-gray-500 col-span-full text-center">
+            Nenhum hábito ativo. Crie um na página de Hábitos!
+          </p>
+        )}
       </CardContent>
     </Card>
   );
-}
+};
 
-/**
- * Main Home Page component that organizes all modules.
- */
+// --- COMPONENTE PRINCIPAL DA PÁGINA HOME ---
 export default function HomePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [journalEntry, setJournalEntry] = useState<JournalEntry>({
+    gratitude: "",
+    memory: "",
+  });
+
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  useEffect(() => {
+    if (!user && !loading) {
+      router.push("/login");
+    }
+    if (user) {
+      const unsubTasks = onSnapshot(
+        collection(db, "users", user.uid, "tasks"),
+        (snap) =>
+          setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task)))
+      );
+      const unsubEvents = onSnapshot(
+        collection(db, "users", user.uid, "events"),
+        (snap) =>
+          setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Event)))
+      );
+      const unsubHabits = onSnapshot(
+        collection(db, "users", user.uid, "habits"),
+        (snap) =>
+          setHabits(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Habit)))
+      );
+      const unsubAreas = onSnapshot(
+        collection(db, "users", user.uid, "areas"),
+        (snap) =>
+          setAreas(
+            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Area))
+          )
+      );
+
+      const journalRef = doc(
+        db,
+        "users",
+        user.uid,
+        "journal_entries",
+        todayStr
+      );
+      const unsubJournal = onSnapshot(journalRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setJournalEntry(docSnap.data() as JournalEntry);
+        } else {
+          setJournalEntry({ gratitude: "", memory: "" });
+        }
+      });
+
+      return () => {
+        unsubTasks();
+        unsubEvents();
+        unsubHabits();
+        unsubAreas();
+        unsubJournal();
+      };
+    }
+  }, [user, loading, router, todayStr]);
+
+  const handleSaveTask = async (task: Partial<Task>) => {
+    if (!user || !task.id) return;
+    await updateDoc(doc(db, "users", user.uid, "tasks", task.id), task);
+  };
+  const handleDeleteTask = async (taskId: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, "users", user.uid, "tasks", taskId));
+    setSelectedTask(null);
+  };
+
+  const handleSaveEvent = async (event: Partial<Event>) => {
+    if (!user || !event.id) return;
+    await updateDoc(doc(db, "users", user.uid, "events", event.id), event);
+  };
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, "users", user.uid, "events", eventId));
+    setSelectedEvent(null);
+  };
+
+  const handleUpdateHabitProgress = async (habit: Habit, amount: number) => {
+    if (!user) return;
+    const currentProgress = habit.dailyProgress?.[todayStr] || 0;
+    const newProgress = Math.max(0, currentProgress + amount);
+    const dailyProgress = { ...habit.dailyProgress, [todayStr]: newProgress };
+    // Lógica de Streak simplificada
+    const newStreak =
+      newProgress >= habit.goal && currentProgress < habit.goal
+        ? (habit.streak || 0) + 1
+        : habit.streak;
+    await updateDoc(doc(db, "users", user.uid, "habits", habit.id), {
+      dailyProgress,
+      streak: newStreak,
+    });
+  };
+  const handleSaveJournal = async (entry: JournalEntry) =>
+    await setDoc(
+      doc(db, "users", user!.uid, "journal_entries", todayStr),
+      entry,
+      { merge: true }
+    );
+
+  if (loading || !user)
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p>Carregando...</p>
+      </div>
+    );
+
   return (
-    <div className="min-h-screen w-full flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen w-full flex bg-gray-50 dark:bg-gray-950">
       <Sidebar />
       <div className="flex flex-col flex-1 md:ml-20">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm px-6">
-          <h1 className="text-xl font-semibold">Home</h1>
-          <div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative rounded-full"
-            >
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
+          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon">
+              <Bell />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full ml-2">
-              <CircleUserRound className="h-6 w-6" />
-            </Button>
+            <a href="/perfil">
+              <Button variant="ghost" size="icon">
+                <CircleUserRound />
+              </Button>
+            </a>
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8">
+          <TaskDetailModal
+            isOpen={!!selectedTask}
+            onClose={() => setSelectedTask(null)}
+            onSave={handleSaveTask}
+            onDelete={handleDeleteTask}
+            task={selectedTask}
+            areas={areas}
+          />
+          <EventDetailModal
+            isOpen={!!selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            onSave={handleSaveEvent}
+            onDelete={handleDeleteEvent}
+            event={selectedEvent}
+          />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <DailySummaryCard />
-            <JournalCard />
-            <HabitsPanelCard />
+            <DailySummaryCard
+              tasks={tasks}
+              events={events}
+              onTaskClick={setSelectedTask}
+              onEventClick={setSelectedEvent}
+              onUpdateTask={handleSaveTask}
+            />
+            <JournalCard
+              onSave={handleSaveJournal}
+              initialEntry={journalEntry}
+            />
+            <HabitsPanelCard
+              habits={habits}
+              onUpdateProgress={handleUpdateHabitProgress}
+            />
           </div>
         </main>
       </div>

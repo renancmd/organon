@@ -1,7 +1,3 @@
-// app/tasks/layout.tsx
-// Este layout garante que a barra de navegação lateral seja exibida
-// em todas as páginas dentro da seção de tarefas.
-
 import React from "react";
 import {
   Home,

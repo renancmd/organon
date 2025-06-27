@@ -1,7 +1,3 @@
-// app/habitos/layout.tsx
-// Este layout garante que a barra de navegação lateral seja exibida
-// na página de Hábitos.
-
 import React from 'react';
 import { Home, ListChecks, CalendarDays, Repeat, GanttChart, CircleUserRound, Bell } from 'lucide-react';
 
@@ -15,7 +11,7 @@ function Sidebar() {
                 </a>
                 <a href="/" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50" ><Home className="h-5 w-5" /></a>
                 <a href="/tasks" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"><ListChecks className="h-5 w-5" /></a>
-                <a href="/agenda" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"><CalendarDays className="h-5 w-5" /></a>
+                <a href="/schedule" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"><CalendarDays className="h-5 w-5" /></a>
                 {/* O link de Hábitos agora está ativo */}
                 <a href="/habitos" className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50"><Repeat className="h-5 w-5" /></a>
                 <a href="/daily-journal" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"><GanttChart className="h-5 w-5" /></a>

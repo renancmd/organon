@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext"; // Ajuste o caminho se necessário
+import { useAuth } from "@/context/AuthContext";
 import {
   doc,
   getDoc,
@@ -15,7 +15,6 @@ import {
 import { db } from "@/lib/firebase";
 import { X, Trash2, Edit, LogOut } from "lucide-react";
 
-// --- Estruturas de Dados ---
 type Area = { id: string; name: string; color: string };
 type UserProfile = { name: string; email: string; profileImageUrl?: string };
 
@@ -30,7 +29,6 @@ const availableColors = [
   "bg-teal-500",
 ];
 
-// --- Componentes UI Mock (Com Tipagem Refinada) ---
 const Card = ({
   children,
   className = "",
@@ -121,7 +119,6 @@ const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   </label>
 );
 
-// --- Modal de Área ---
 function AreaModal({
   isOpen,
   onClose,
@@ -159,9 +156,9 @@ function AreaModal({
           <Label>Nome</Label>
           <Input
             value={currentArea.name || ""}
-            onChange={(
-              e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
-            ) => setCurrentArea({ ...currentArea, name: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setCurrentArea({ ...currentArea, name: e.target.value })
+            }
           />
           <Label>Cor</Label>
           <div className="flex flex-wrap gap-2 pt-2">
@@ -285,9 +282,7 @@ export default function ProfilePage() {
               <Input
                 id="name"
                 value={profile?.name || ""}
-                onChange={(
-                  e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
-                ) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setProfile((p) => (p ? { ...p, name: e.target.value } : null))
                 }
               />

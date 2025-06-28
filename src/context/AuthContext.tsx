@@ -11,30 +11,31 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut, // Importado para a função de logout
+  signOut,
   User,
+  UserCredential,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 
-// Tipagem para o valor do contexto
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signUp: (name: string, email: string, password: string) => Promise<any>;
-  signIn: (email: string, password: string) => Promise<any>;
-  logout: () => Promise<void>; // Adicionada função de logout
+  signUp: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<UserCredential>;
+  signIn: (email: string, password: string) => Promise<UserCredential>;
+  logout: () => Promise<void>;
 }
 
-// Cria o contexto com um valor padrão
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Componente Provedor do Contexto
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Função de Registro
   const signUp = async (name: string, email: string, password: string) => {
     const userCredential = await createUserWithEmailAndPassword(
       auth,
@@ -42,36 +43,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password
     );
 
-    // Cria um documento para o novo usuário no Firestore
     await setDoc(doc(db, "users", userCredential.user.uid), {
       userId: userCredential.user.uid,
       name: name,
       email: email,
-      createdAt: new Date(),
+      createdAt: Timestamp.now(),
       profileImageUrl: "",
     });
 
     return userCredential;
   };
 
-  // Função de Login
   const signIn = (email: string, password: string) => {
     return signInWithEmailAndPassword(auth, email, password);
   };
 
-  // Função de Logout
   const logout = () => {
     return signOut(auth);
   };
 
   useEffect(() => {
-    // Ouve mudanças no estado de autenticação
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
-
-    // Limpa o ouvinte quando o componente é desmontado
     return () => unsubscribe();
   }, []);
 
@@ -80,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading,
     signUp,
     signIn,
-    logout, // Exporta a função de logout
+    logout,
   };
 
   return (
@@ -90,7 +85,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Hook personalizado para usar o contexto de autenticação
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -34,7 +34,7 @@ type JournalEntry = {
   gratitude: string;
   memory: string;
   attachments?: Attachment[];
-  date?: string; // Adicionado para consistência
+  date?: string;
 };
 
 // --- Componentes UI Mock (Com Tipagem Refinada) ---
@@ -140,12 +140,9 @@ export default function DailyJournalPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  // Estados para todos os dados do usuário
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
-
-  // Estados para o diário
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [journalEntry, setJournalEntry] = useState<JournalEntry>({
     gratitude: "",
@@ -155,7 +152,6 @@ export default function DailyJournalPage() {
 
   const toYYYYMMDD = (date: Date) => date.toISOString().split("T")[0];
 
-  // Efeito para carregar todos os dados do usuário
   useEffect(() => {
     if (!user && !loading) {
       router.push("/sign-in");
@@ -185,7 +181,6 @@ export default function DailyJournalPage() {
     }
   }, [user, loading, router]);
 
-  // Efeito para carregar a entrada do diário da data selecionada
   useEffect(() => {
     if (user) {
       const dateStr = toYYYYMMDD(selectedDate);
@@ -194,13 +189,12 @@ export default function DailyJournalPage() {
         if (docSnap.exists()) {
           setJournalEntry(docSnap.data() as JournalEntry);
         } else {
-          setJournalEntry({ gratitude: "", memory: "" }); // Reseta se não houver entrada
+          setJournalEntry({ gratitude: "", memory: "" });
         }
       });
     }
   }, [selectedDate, user]);
 
-  // Filtra os dados para o dia selecionado
   const dailyData = useMemo(() => {
     const dateStr = toYYYYMMDD(selectedDate);
     return {
@@ -297,13 +291,17 @@ export default function DailyJournalPage() {
                   Concluídas
                 </h4>
                 <ul className="list-none space-y-2 pl-2">
-                  {dailyData.tasks.map((t) => (
-                    <li key={t.id} className="text-sm flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-500" />
-                      {t.name}
-                    </li>
-                  ))}
-                  {dailyData.tasks.length === 0 && (
+                  {dailyData.tasks.length > 0 ? (
+                    dailyData.tasks.map((t) => (
+                      <li
+                        key={t.id}
+                        className="text-sm flex items-center gap-2"
+                      >
+                        <Check className="w-4 h-4 text-green-500" />
+                        {t.name}
+                      </li>
+                    ))
+                  ) : (
                     <li className="text-sm text-gray-500">Nenhuma tarefa.</li>
                   )}
                 </ul>
@@ -313,12 +311,13 @@ export default function DailyJournalPage() {
                   <Clock className="w-5 h-5 text-blue-500" /> Eventos do Dia
                 </h4>
                 <ul className="list-none space-y-2 pl-2">
-                  {dailyData.events.map((e) => (
-                    <li key={e.id} className="text-sm">
-                      {e.startTime} - {e.name}
-                    </li>
-                  ))}
-                  {dailyData.events.length === 0 && (
+                  {dailyData.events.length > 0 ? (
+                    dailyData.events.map((e) => (
+                      <li key={e.id} className="text-sm">
+                        {e.startTime} - {e.name}
+                      </li>
+                    ))
+                  ) : (
                     <li className="text-sm text-gray-500">Nenhum evento.</li>
                   )}
                 </ul>
@@ -329,12 +328,13 @@ export default function DailyJournalPage() {
                   Praticados
                 </h4>
                 <ul className="list-none space-y-2 pl-2">
-                  {dailyData.habits.map((h) => (
-                    <li key={h.id} className="text-sm">
-                      {h.name}
-                    </li>
-                  ))}
-                  {dailyData.habits.length === 0 && (
+                  {dailyData.habits.length > 0 ? (
+                    dailyData.habits.map((h) => (
+                      <li key={h.id} className="text-sm">
+                        {h.name}
+                      </li>
+                    ))
+                  ) : (
                     <li className="text-sm text-gray-500">Nenhum hábito.</li>
                   )}
                 </ul>

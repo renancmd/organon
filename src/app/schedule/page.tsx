@@ -25,13 +25,13 @@ import {
 type Event = {
   id: string;
   name: string;
-  date: string; // YYYY-MM-DD
-  startTime?: string; // HH:MM
+  date: string;
+  startTime?: string;
   endTime?: string;
   color: string;
   location?: string;
   recurrence?: "Nenhuma" | "Diário" | "Semanal" | "Mensal";
-  createdAt?: Date; // Adicionado para consistência
+  createdAt?: Date;
 };
 
 const availableColors = [
@@ -44,19 +44,7 @@ const availableColors = [
 ];
 
 // --- Componentes UI Mock (Com Tipagem Refinada) ---
-const Card = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
-  >
-    {children}
-  </div>
-);
+// O componente Card foi removido pois não era utilizado.
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "ghost" | "outline";
@@ -150,7 +138,7 @@ function EventModal({
     onClose();
   };
 
-  const handleFieldChange = (field: keyof Event, value: string | undefined) =>
+  const handleFieldChange = (field: keyof Event, value: string) =>
     setCurrentEvent((prev) => (prev ? { ...prev, [field]: value } : null));
 
   return (
@@ -231,10 +219,7 @@ function EventModal({
             <Select
               value={currentEvent.recurrence || "Nenhuma"}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                handleFieldChange(
-                  "recurrence",
-                  e.target.value as Event["recurrence"]
-                )
+                handleFieldChange("recurrence", e.target.value)
               }
             >
               <option>Nenhuma</option>
@@ -444,10 +429,7 @@ export default function AgendaPage() {
               size="icon"
               onClick={() =>
                 setCurrentDate(
-                  (prevDate) =>
-                    new Date(
-                      new Date(prevDate).setMonth(prevDate.getMonth() - 1)
-                    )
+                  new Date(currentDate.setMonth(currentDate.getMonth() - 1))
                 )
               }
             >
@@ -464,10 +446,7 @@ export default function AgendaPage() {
               size="icon"
               onClick={() =>
                 setCurrentDate(
-                  (prevDate) =>
-                    new Date(
-                      new Date(prevDate).setMonth(prevDate.getMonth() + 1)
-                    )
+                  new Date(currentDate.setMonth(currentDate.getMonth() + 1))
                 )
               }
             >

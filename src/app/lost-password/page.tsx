@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { Home } from "lucide-react";
+import Link from "next/link"; // Importado para navegação correta
+// O ícone 'Home' foi removido pois não era utilizado
 
-// --- Componentes Mock ---
+// --- Componentes UI Mock (Com Tipagem Refinada) ---
 const Card = ({
   children,
   className = "",
@@ -37,19 +38,19 @@ const CardContent = ({
   children: React.ReactNode;
   className?: string;
 }) => <div className={`p-6 ${className}`}>{children}</div>;
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "ghost" | "link";
+  size?: "default" | "icon";
+};
+
 const Button = ({
   children,
   className = "",
   variant = "default",
   size = "default",
   ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  variant?: "default" | "ghost" | "link";
-  size?: "default" | "icon";
-  [key: string]: any;
-}) => {
+}: ButtonProps) => {
   const baseClasses =
     "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
   const variantClasses = {
@@ -68,54 +69,40 @@ const Button = ({
     </button>
   );
 };
-const Input = ({
-  className = "",
-  type = "text",
-  placeholder = "",
-  ...props
-}: {
-  className?: string;
-  type?: string;
-  placeholder?: string;
-  [key: string]: any;
-}) => (
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
-    type={type}
-    placeholder={placeholder}
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Label = ({
-  children,
-  htmlFor,
-}: {
-  children: React.ReactNode;
-  htmlFor: string;
-}) => (
+
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
-    htmlFor={htmlFor}
+    {...props}
     className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
   >
-    {" "}
-    {children}{" "}
+    {props.children}
   </label>
 );
 
 export default function ForgotPasswordPage() {
+  // A lógica de envio de e-mail pode ser adicionada aqui com useState e uma função de submit.
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
       <div className="w-full max-w-md p-4">
         <Card>
           <CardHeader>
             <div className="flex justify-center mb-4">
-              <a
+              <Link
                 href="/"
                 className="group flex h-12 w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900"
                 title="Organon"
               >
                 <span className="text-2xl">O</span>
-              </a>
+              </Link>
             </div>
             <CardTitle>Recuperar Senha</CardTitle>
             <CardDescription>
@@ -131,12 +118,12 @@ export default function ForgotPasswordPage() {
           </CardContent>
           <div className="p-6 pt-0 text-center text-sm text-gray-600 dark:text-gray-400">
             Lembrou sua senha?{" "}
-            <a
+            <Link
               href="/sign-in"
               className="font-medium text-blue-600 hover:underline dark:text-blue-500"
             >
               Voltar para o login
-            </a>
+            </Link>
           </div>
         </Card>
       </div>

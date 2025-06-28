@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link"; // Adicionado
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
@@ -89,28 +90,25 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    console.log("[RegisterPage] - Formulário enviado. Tentando registrar...");
     try {
-      // O 'signUp' no seu AuthContext provavelmente precisa ser adaptado para aceitar 'name'
-      // Assumindo que seu método signUp foi atualizado para: signUp(email, password, name)
       await signUp(email, password, name);
-      console.log("[RegisterPage] - signUp bem-sucedido! Redirecionando...");
       router.push("/");
-    } catch (err: any) {
-      console.error("[RegisterPage] - Erro capturado no handleSubmit:", err);
-      // Tratamento de erros comuns do Firebase
-      if (err.code === "auth/email-already-in-use") {
-        setError("Este e-mail já está em uso.");
-      } else if (err.code === "auth/weak-password") {
-        setError("A senha deve ter pelo menos 6 caracteres.");
-      } else if (err.code === "permission-denied") {
-        // Erro de permissão do Firestore
-        setError(
-          "Erro de permissão ao salvar dados. Verifique as regras de segurança."
-        );
-      } else {
-        setError("Falha ao criar a conta. Tente novamente.");
+    } catch (err: unknown) {
+      // Usar unknown é mais seguro que 'any'
+      let message = "Falha ao criar a conta. Tente novamente.";
+      if (err instanceof Error && "code" in err) {
+        const firebaseError = err as { code: string };
+        if (firebaseError.code === "auth/email-already-in-use") {
+          message = "Este e-mail já está em uso.";
+        } else if (firebaseError.code === "auth/weak-password") {
+          message = "A senha deve ter pelo menos 6 caracteres.";
+        } else if (firebaseError.code === "permission-denied") {
+          message =
+            "Erro de permissão ao salvar dados. Verifique as regras de segurança.";
+        }
       }
+      setError(message);
+      console.error("[RegisterPage] - Erro capturado no handleSubmit:", err);
     } finally {
       setLoading(false);
     }
@@ -121,13 +119,13 @@ export default function RegisterPage() {
       <div className="w-full max-w-md p-4">
         <Card>
           <CardHeader>
-            <a href="/" className="flex justify-center mb-4">
+            <Link href="/" className="flex justify-center mb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-900 dark:bg-gray-50">
                 <span className="text-2xl font-semibold text-white dark:text-gray-900">
                   O
                 </span>
               </div>
-            </a>
+            </Link>
             <CardTitle>Crie sua conta</CardTitle>
             <CardDescription>
               É rápido e fácil. Comece a se organizar agora mesmo.
@@ -142,9 +140,7 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="Seu nome"
                   value={name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setName(e.target.value)
-                  } // CORRIGIDO
+                  onChange={(e) => setName(e.target.value)}
                   required
                 />
               </div>
@@ -155,9 +151,7 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setEmail(e.target.value)
-                  } // CORRIGIDO
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -167,9 +161,7 @@ export default function RegisterPage() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setPassword(e.target.value)
-                  } // CORRIGIDO
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
@@ -179,9 +171,7 @@ export default function RegisterPage() {
                   id="confirm-password"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setConfirmPassword(e.target.value)
-                  } // CORRIGIDO
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                 />
               </div>
@@ -193,12 +183,12 @@ export default function RegisterPage() {
           </CardContent>
           <div className="p-6 pt-0 text-center text-sm text-gray-600 dark:text-gray-400">
             Já tem uma conta?{" "}
-            <a
+            <Link
               href="/sign-in"
               className="font-medium text-blue-600 hover:underline dark:text-blue-500"
             >
               Entre
-            </a>
+            </Link>
           </div>
         </Card>
       </div>

@@ -32,7 +32,6 @@ type Habit = {
   type: "binario" | "quantitativo";
   goal: number; // 1 para binário, N para quantitativo
   color: string;
-  // Armazena o progresso diário: { "2025-06-28": 5 }
   dailyProgress?: { [date: string]: number };
   createdAt: Timestamp;
 };
@@ -277,7 +276,7 @@ const HabitGrid = ({
 }) => {
   const calculateStreak = (habit: Habit): number => {
     let currentStreak = 0;
-    const today = new Date();
+    const today = new Date(); // Corrigido para const
     today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 365; i++) {
@@ -288,7 +287,6 @@ const HabitGrid = ({
       if (progress >= habit.goal) {
         currentStreak++;
       } else {
-        // Se o dia não foi cumprido mas é hoje, não quebra a corrente ainda
         if (dateToCheck.getTime() === today.getTime() && i === 0) {
           continue;
         }
@@ -306,7 +304,6 @@ const HabitGrid = ({
           "minmax(150px, 1.5fr) repeat(7, minmax(50px, 1fr)) minmax(100px, 0.5fr)",
       }}
     >
-      {/* Cabeçalho */}
       <div className="font-semibold text-sm sticky left-0 bg-white dark:bg-gray-900 z-10 pr-2">
         Hábito
       </div>
@@ -320,7 +317,6 @@ const HabitGrid = ({
       ))}
       <div className="sticky right-0 bg-white dark:bg-gray-900"></div>
 
-      {/* Linhas de Hábitos */}
       {habits.map((habit) => {
         const streak = calculateStreak(habit);
         return (
@@ -333,12 +329,10 @@ const HabitGrid = ({
               const dateStr = day.toISOString().split("T")[0];
               const progress = habit.dailyProgress?.[dateStr] || 0;
               const isComplete = progress >= habit.goal;
-
               const handleClick = () => {
                 if (habit.type === "binario") {
                   onProgress(habit, day, isComplete ? 0 : 1);
                 } else {
-                  // Para quantitativo, o clique sempre incrementa
                   onProgress(habit, day, progress + 1);
                 }
               };

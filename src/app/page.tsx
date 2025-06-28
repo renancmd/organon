@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link"; // Adicionado para navegação correta
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
@@ -8,7 +9,6 @@ import {
   collection,
   onSnapshot,
   doc,
-  getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -21,18 +21,15 @@ import {
   GanttChart,
   CircleUserRound,
   Bell,
-  Check,
   Flame,
   Minus,
   Plus,
   X,
   Paperclip,
-  Edit,
   Trash2,
 } from "lucide-react";
 
 // --- ESTRUTURAS DE DADOS ---
-type Area = { id: string; name: string; color: string };
 type SubTask = { id: string; name: string; completed: boolean };
 type Attachment = { id: string; name: string; url: string };
 type Task = {
@@ -74,7 +71,7 @@ type JournalEntry = {
   attachments?: Attachment[];
 };
 
-// --- COMPONENTES UI MOCK ---
+// --- COMPONENTES UI MOCK (COM TIPAGEM CORRIGIDA) ---
 const Card = ({
   children,
   className = "",
@@ -105,9 +102,7 @@ const CardFooter = ({ children }: { children: React.ReactNode }) => (
   <div className="flex items-center p-6 pt-0">{children}</div>
 );
 
-// CORREÇÃO 1: TIPAGEM DO BOTÃO
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  children: React.ReactNode;
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "icon";
 };
@@ -157,6 +152,7 @@ const Checkbox = ({
     />
   </div>
 );
+
 const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     className={`flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm ${
@@ -165,11 +161,13 @@ const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
     {...props}
   />
 );
+
 const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label className="text-sm font-medium" {...props}>
     {props.children}
   </label>
 );
+
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
@@ -178,14 +176,7 @@ const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
     }`}
   />
 );
-const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
-  <select
-    {...props}
-    className="h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800"
-  >
-    {props.children}
-  </select>
-);
+
 const Tabs = ({ children }: { children: React.ReactNode }) => (
   <div>{children}</div>
 );
@@ -216,21 +207,19 @@ const TabsContent = ({ children }: { children: React.ReactNode }) => (
   <div className="mt-4">{children}</div>
 );
 
-// --- MODAIS COMPLETOS ---
+// --- MODAIS ---
 const TaskDetailModal = ({
   isOpen,
   onClose,
   onSave,
   onDelete,
   task,
-  areas,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: Partial<Task>) => void;
   onDelete: (taskId: string) => void;
   task: Partial<Task> | null;
-  areas: Area[];
 }) => {
   const [currentTask, setCurrentTask] = useState<Partial<Task> | null>(task);
   useEffect(() => {
@@ -264,14 +253,12 @@ const TaskDetailModal = ({
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
           <Input
             value={currentTask.name || ""}
-            // CORREÇÃO 2.1: TIPO DE EVENTO
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setCurrentTask({ ...currentTask, name: e.target.value })
             }
           />
           <Textarea
             value={currentTask.description || ""}
-            // CORREÇÃO 2.2: TIPO DE EVENTO
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setCurrentTask({ ...currentTask, description: e.target.value })
             }
@@ -336,7 +323,6 @@ const EventDetailModal = ({
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           <Input
             value={currentEvent.name || ""}
-            // CORREÇÃO 2.3: TIPO DE EVENTO
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setCurrentEvent({ ...currentEvent, name: e.target.value })
             }
@@ -362,51 +348,51 @@ function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r bg-white dark:bg-gray-950 dark:border-gray-800 md:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-        <a
+        <Link
           href="/"
           className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900"
           title="Organon"
         >
           <span className="text-xl">O</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/"
           className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-900 dark:bg-gray-800"
         >
           <Home className="h-5 w-5" />
-        </a>
-        <a
+        </Link>
+        <Link
           href="/tasks"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <ListChecks className="h-5 w-5" />
-        </a>
-        <a
-          href="/agenda"
+        </Link>
+        <Link
+          href="/schedule"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <CalendarDays className="h-5 w-5" />
-        </a>
-        <a
-          href="/habitos"
+        </Link>
+        <Link
+          href="/habits"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <Repeat className="h-5 w-5" />
-        </a>
-        <a
+        </Link>
+        <Link
           href="/daily-journal"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <GanttChart className="h-5 w-5" />
-        </a>
+        </Link>
       </nav>
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-        <a
+        <Link
           href="/perfil"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900"
         >
           <CircleUserRound className="h-5 w-5" />
-        </a>
+        </Link>
       </nav>
     </aside>
   );
@@ -423,7 +409,7 @@ const DailySummaryCard = ({
   events: Event[];
   onTaskClick: (t: Task) => void;
   onEventClick: (e: Event) => void;
-  onUpdateTask: (t: Partial<Task>) => void; // Corrigido para Partial<Task> para corresponder ao uso
+  onUpdateTask: (t: Partial<Task>) => void;
 }) => {
   const [activeTab, setActiveTab] = useState<
     "today" | "tomorrow" | "next7days"
@@ -599,7 +585,6 @@ const JournalCard = ({
           <Textarea
             placeholder="Escreva aqui..."
             value={entry.gratitude}
-            // CORREÇÃO 2.4: TIPO DE EVENTO
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setEntry({ ...entry, gratitude: e.target.value })
             }
@@ -610,7 +595,6 @@ const JournalCard = ({
           <Textarea
             placeholder="Escreva aqui..."
             value={entry.memory}
-            // CORREÇÃO 2.5: TIPO DE EVENTO
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setEntry({ ...entry, memory: e.target.value })
             }
@@ -715,7 +699,6 @@ export default function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [areas, setAreas] = useState<Area[]>([]);
   const [journalEntry, setJournalEntry] = useState<JournalEntry>({
     gratitude: "",
     memory: "",
@@ -749,14 +732,8 @@ export default function HomePage() {
         (snap) =>
           setHabits(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Habit)))
       );
-      const unsubAreas = onSnapshot(
-        collection(db, "users", user.uid, "areas"),
-        (snap) =>
-          setAreas(
-            snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Area))
-          )
-      );
 
+      // Listener do Diário
       const journalRef = doc(
         db,
         "users",
@@ -776,7 +753,6 @@ export default function HomePage() {
         unsubTasks();
         unsubEvents();
         unsubHabits();
-        unsubAreas();
         unsubJournal();
       };
     }
@@ -809,7 +785,6 @@ export default function HomePage() {
     const newProgress = Math.max(0, currentProgress + amount);
     const dailyProgress = { ...habit.dailyProgress, [todayStr]: newProgress };
 
-    // Lógica de Streak simplificada
     const newStreak =
       newProgress >= habit.goal && currentProgress < habit.goal
         ? (habit.streak || 0) + 1
@@ -820,12 +795,14 @@ export default function HomePage() {
       streak: newStreak,
     });
   };
-  const handleSaveJournal = async (entry: JournalEntry) =>
+  const handleSaveJournal = async (entry: JournalEntry) => {
+    if (!user) return;
     await setDoc(
-      doc(db, "users", user!.uid, "journal_entries", todayStr),
+      doc(db, "users", user.uid, "journal_entries", todayStr),
       entry,
       { merge: true }
     );
+  };
 
   if (loading || !user)
     return (
@@ -844,11 +821,11 @@ export default function HomePage() {
             <Button variant="ghost" size="icon">
               <Bell />
             </Button>
-            <a href="/perfil">
+            <Link href="/perfil">
               <Button variant="ghost" size="icon">
                 <CircleUserRound />
               </Button>
-            </a>
+            </Link>
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8">
@@ -858,7 +835,6 @@ export default function HomePage() {
             onSave={handleSaveTask}
             onDelete={handleDeleteTask}
             task={selectedTask}
-            areas={areas}
           />
           <EventDetailModal
             isOpen={!!selectedEvent}

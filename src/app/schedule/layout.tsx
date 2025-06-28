@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import Link from "next/link"; // 1. Importado o Link
 import {
   Home,
   ListChecks,
@@ -9,66 +12,75 @@ import {
   Bell,
 } from "lucide-react";
 
-// Componente da Barra Lateral (reutilizado)
+// Componente da Barra Lateral (reutilizado e corrigido)
 function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r bg-white dark:bg-gray-950 dark:border-gray-800 md:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-        <a
+        {/* 2. Todos os <a> foram trocados por <Link> */}
+        <Link
           href="/"
           className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900 md:h-8 md:w-8 md:text-base"
           title="Organon"
         >
           <span className="text-xl">O</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
         >
           <Home className="h-5 w-5" />
-        </a>
-        <a
+        </Link>
+        <Link
           href="/tasks"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
         >
           <ListChecks className="h-5 w-5" />
-        </a>
-        {/* O link de Agenda agora está ativo */}
-        <a
+        </Link>
+        <Link
           href="/schedule"
           className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50"
         >
           <CalendarDays className="h-5 w-5" />
-        </a>
-        <a
+        </Link>
+        <Link
           href="/habits"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
         >
           <Repeat className="h-5 w-5" />
-        </a>
-        <a
+        </Link>
+        <Link
           href="/daily-journal"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
         >
           <GanttChart className="h-5 w-5" />
-        </a>
+        </Link>
+      </nav>
+      {/* O código original não tinha o link de Perfil na sidebar, adicionei para consistência */}
+      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+        <Link
+          href="/perfil"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+        >
+          <CircleUserRound className="h-5 w-5" />
+        </Link>
       </nav>
     </aside>
   );
 }
 
-// Botão (Mock)
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "ghost" | "outline";
+  size?: "default" | "icon";
+};
+
 const Button = ({
   children,
   className = "",
   variant = "default",
   size = "default",
-}: {
-  children: React.ReactNode;
-  className?: string;
-  variant?: "default" | "ghost" | "outline";
-  size?: "default" | "icon";
-}) => {
+  ...props
+}: ButtonProps) => {
   const baseClasses =
     "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:opacity-50 disabled:pointer-events-none";
   const variantClasses = {
@@ -82,6 +94,7 @@ const Button = ({
   return (
     <button
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      {...props}
     >
       {children}
     </button>

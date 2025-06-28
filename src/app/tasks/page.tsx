@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
@@ -12,7 +12,16 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { X, MoreHorizontal, Calendar, Trash2, CheckSquare } from "lucide-react";
+import {
+  X,
+  Paperclip,
+  MoreHorizontal,
+  Calendar,
+  Trash2,
+  CheckSquare,
+  CheckCircle2,
+  ChevronDown,
+} from "lucide-react";
 
 // --- Estruturas de Dados ---
 type Area = { id: string; name: string; color: string };
@@ -29,18 +38,19 @@ type Task = {
   subtasks: SubTask[];
   color: string;
   attachments?: Attachment[];
-  createdAt?: Date;
 };
 
-// --- Componentes UI Mock (Com Tipagem Refinada) ---
-const Card = (props: React.HTMLAttributes<HTMLDivElement>) => (
+// --- Componentes UI ---
+const Card = ({
+  children,
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     {...props}
-    className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${
-      props.className || ""
-    }`}
+    className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
   >
-    {props.children}
+    {children}
   </div>
 );
 
@@ -48,26 +58,39 @@ const Checkbox = ({
   id,
   checked,
   onChange,
+  disabled,
+  ...props
 }: {
   id: string;
   checked?: boolean;
   onChange?: (checked: boolean) => void;
+  disabled?: boolean;
 }) => (
-  <div className="flex items-center pt-1" onClick={(e) => e.stopPropagation()}>
+  <div
+    className="flex items-center pt-1"
+    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+  >
     <input
       id={id}
       type="checkbox"
       checked={!!checked}
-      onChange={(e) => onChange?.(e.target.checked)}
-      className="h-4 w-4 shrink-0 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+        onChange?.(e.target.checked)
+      }
+      disabled={disabled}
+      className="h-4 w-4 shrink-0 rounded-sm border-gray-300"
+      {...props}
     />
   </div>
 );
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+// Tipos para as props do botão
+type ButtonProps = {
+  children: React.ReactNode;
+  className?: string;
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "icon";
-};
+} & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 const Button = ({
   children,
@@ -84,7 +107,7 @@ const Button = ({
     ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
     outline: "border border-gray-200 dark:border-gray-700",
   };
-  const sizes = { default: "h-10 py-2 px-4", icon: "h-10 w-10" };
+  const sizes = { default: "h-10 px-4 py-2", icon: "h-10 w-10" };
   return (
     <button
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
@@ -95,43 +118,51 @@ const Button = ({
   );
 };
 
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+const Input = ({
+  className = "",
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
-      props.className || ""
-    }`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
   />
 );
 
-const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+const Textarea = ({
+  className = "",
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className={`flex min-h-[80px] w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
-      props.className || ""
-    }`}
+    className={`flex min-h-[80px] w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
   />
 );
 
-const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
+const Label = ({
+  children,
+  ...props
+}: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
     {...props}
     className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
   >
-    {props.children}
+    {children}
   </label>
 );
 
-const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
+const Select = ({
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
     {...props}
     className="h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800"
   >
-    {props.children}
+    {children}
   </select>
 );
 
-// --- MODAL DE TAREFA ---
+// --- MODAL DE TAREFA COMPLETO ---
 function TaskModal({
   isOpen,
   onClose,
@@ -148,7 +179,6 @@ function TaskModal({
   areas: Area[];
 }) {
   const [currentTask, setCurrentTask] = useState<Partial<Task> | null>(task);
-
   useEffect(() => {
     setCurrentTask(task);
   }, [task]);
@@ -158,10 +188,8 @@ function TaskModal({
   const isNewTask = !currentTask.id;
 
   const handleSave = () => {
-    if (currentTask) {
-      onSave(currentTask);
-      onClose();
-    }
+    onSave(currentTask);
+    onClose();
   };
 
   const handleSubtaskChange = (
@@ -169,27 +197,21 @@ function TaskModal({
     field: "name" | "completed",
     value: string | boolean
   ) => {
-    if (!currentTask) return;
     const newSubtasks = [...(currentTask.subtasks || [])];
     newSubtasks[index] = { ...newSubtasks[index], [field]: value };
     setCurrentTask({ ...currentTask, subtasks: newSubtasks });
   };
 
-  const handleAddSubtask = () => {
-    if (!currentTask) return;
-    const newSubtask: SubTask = {
-      id: `sub-${Date.now()}`,
-      name: "",
-      completed: false,
-    };
+  const handleAddSubtask = () =>
     setCurrentTask({
       ...currentTask,
-      subtasks: [...(currentTask.subtasks || []), newSubtask],
+      subtasks: [
+        ...(currentTask.subtasks || []),
+        { id: `sub-${Date.now()}`, name: "", completed: false },
+      ],
     });
-  };
 
   const handleDeleteSubtask = (index: number) => {
-    if (!currentTask) return;
     const newSubtasks = [...(currentTask.subtasks || [])];
     newSubtasks.splice(index, 1);
     setCurrentTask({ ...currentTask, subtasks: newSubtasks });
@@ -202,7 +224,7 @@ function TaskModal({
     >
       <div
         className="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         <div className="p-6 border-b flex justify-between items-center">
           <h3 className="text-lg font-semibold">
@@ -218,13 +240,22 @@ function TaskModal({
           </Button>
         </div>
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-          <Input
-            placeholder="Nome da Tarefa"
-            value={currentTask.name || ""}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setCurrentTask({ ...currentTask, name: e.target.value })
-            }
-          />
+          <div className="flex items-center gap-4">
+            <Checkbox
+              id={`modal-status-${currentTask.id}`}
+              checked={currentTask.completed}
+              onChange={(c) => setCurrentTask({ ...currentTask, completed: c })}
+              disabled={isNewTask}
+            />
+            <Input
+              placeholder="Nome da Tarefa"
+              value={currentTask.name || ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setCurrentTask({ ...currentTask, name: e.target.value })
+              }
+              className="text-lg font-semibold border-none !h-auto !p-0 focus-visible:ring-0"
+            />
+          </div>
           <Textarea
             placeholder="Descrição..."
             value={currentTask.description || ""}
@@ -234,8 +265,9 @@ function TaskModal({
           />
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Data</Label>
+              <Label htmlFor="task-date">Data</Label>
               <Input
+                id="task-date"
                 type="date"
                 value={currentTask.date || ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -244,8 +276,9 @@ function TaskModal({
               />
             </div>
             <div>
-              <Label>Hora (Opcional)</Label>
+              <Label htmlFor="task-time">Hora (Opcional)</Label>
               <Input
+                id="task-time"
                 type="time"
                 value={currentTask.time || ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -256,8 +289,9 @@ function TaskModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Prioridade</Label>
+              <Label htmlFor="task-priority">Prioridade</Label>
               <Select
+                id="task-priority"
                 value={currentTask.priority || "Média"}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                   setCurrentTask({
@@ -278,14 +312,16 @@ function TaskModal({
                 {areas.map((a) => (
                   <button
                     key={a.id}
+                    type="button"
                     onClick={() =>
                       setCurrentTask({ ...currentTask, color: a.color })
                     }
                     className={`w-8 h-8 rounded-full ${a.color} ${
                       currentTask.color === a.color
-                        ? "ring-2 ring-offset-2"
+                        ? "ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900"
                         : ""
                     }`}
+                    aria-label={`Selecionar área ${a.name}`}
                   />
                 ))}
               </div>
@@ -329,8 +365,8 @@ function TaskModal({
           </div>
           <div className="space-y-2">
             <Label>Anexos</Label>
-            {/* O ícone Paperclip foi removido da importação por não ser usado */}
             <Button variant="outline" className="w-full text-sm">
+              <Paperclip className="w-4 h-4 mr-2" />
               Adicionar Anexo
             </Button>
           </div>
@@ -351,7 +387,52 @@ function TaskModal({
   );
 }
 
-// --- VISUALIZAÇÕES ---
+// --- COMPONENTE: Dropdown de Tarefas Concluídas ---
+const CompletedTasksDropdown = ({
+  tasks,
+  onTaskClick,
+  onUpdateTask,
+}: {
+  tasks: Task[];
+  onTaskClick: (t: Task) => void;
+  onUpdateTask: (t: Partial<Task>) => void;
+}) => {
+  if (tasks.length === 0) return null;
+  return (
+    <details className="mt-6 rounded-lg border dark:border-gray-800 group">
+      <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+        <div className="flex items-center gap-2 font-semibold">
+          <CheckCircle2 className="w-5 h-5 text-green-500" />
+          <span>Completadas</span>
+          <span className="text-sm text-gray-500">({tasks.length})</span>
+        </div>
+        <ChevronDown className="transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <div className="border-t dark:border-gray-800 p-4 space-y-2">
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400"
+          >
+            <Checkbox
+              id={`c-${task.id}`}
+              checked={task.completed}
+              onChange={(c) => onUpdateTask({ id: task.id, completed: c })}
+            />
+            <span
+              className="line-through cursor-pointer hover:text-gray-800 dark:hover:text-gray-200"
+              onClick={() => onTaskClick(task)}
+            >
+              {task.name}
+            </span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+};
+
+// --- VISUALIZAÇÕES ATUALIZADAS ---
 const KanbanView = ({
   tasks,
   areas,
@@ -378,8 +459,9 @@ const KanbanView = ({
         <div
           key={area.id}
           className="flex flex-col gap-4 p-2 bg-gray-100/50 dark:bg-gray-900/50 rounded-lg"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
+          onDragOver={(e: React.DragEvent) => e.preventDefault()}
+          onDrop={(e: React.DragEvent) => {
+            e.preventDefault();
             onTaskDrop(e.dataTransfer.getData("taskId"), area.color);
           }}
         >
@@ -389,20 +471,24 @@ const KanbanView = ({
           </div>
           <div className="flex flex-col gap-4 min-h-[200px]">
             {tasks
-              .filter((t) => t.color === area.color)
+              .filter((task) => task.color === area.color)
               .map((task) => (
                 <Card
                   key={task.id}
                   className="p-3 cursor-pointer group"
                   onClick={() => onTaskClick(task)}
                   draggable
-                  onDragStart={(e) => e.dataTransfer.setData("taskId", task.id)}
+                  onDragStart={(e: React.DragEvent) =>
+                    e.dataTransfer.setData("taskId", task.id)
+                  }
                 >
                   <div className="flex items-start gap-3">
                     <Checkbox
                       id={`k-${task.id}`}
                       checked={task.completed}
-                      onChange={(c) => onUpdateTask({ ...task, completed: c })}
+                      onChange={(c) =>
+                        onUpdateTask({ id: task.id, completed: c })
+                      }
                     />
                     <p
                       className={`text-sm ${
@@ -431,8 +517,8 @@ const KanbanView = ({
                     <div
                       className={`text-xs font-semibold px-2 py-1 rounded-full ${
                         task.priority === "Urgente" || task.priority === "Alta"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
+                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300"
                       }`}
                     >
                       {task.priority}
@@ -466,8 +552,9 @@ const ListView = ({
     {areas.map((area) => (
       <div
         key={area.id}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
+        onDragOver={(e: React.DragEvent) => e.preventDefault()}
+        onDrop={(e: React.DragEvent) => {
+          e.preventDefault();
           const taskId = e.dataTransfer.getData("taskId");
           onTaskDrop(taskId, area.color);
         }}
@@ -478,22 +565,26 @@ const ListView = ({
         </div>
         <div className="space-y-2">
           {tasks
-            .filter((t) => t.color === area.color)
+            .filter((task) => task.color === area.color)
             .map((task) => (
               <div
                 key={task.id}
                 className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border rounded-lg cursor-grab"
                 draggable
-                onDragStart={(e) => e.dataTransfer.setData("taskId", task.id)}
+                onDragStart={(e: React.DragEvent) =>
+                  e.dataTransfer.setData("taskId", task.id)
+                }
               >
                 <div
-                  className="flex items-center gap-4 flex-1"
+                  className="flex items-center gap-4 flex-1 cursor-pointer"
                   onClick={() => onTaskClick(task)}
                 >
                   <Checkbox
                     id={`l-${task.id}`}
                     checked={task.completed}
-                    onChange={(c) => onUpdateTask({ ...task, completed: c })}
+                    onChange={(c) =>
+                      onUpdateTask({ id: task.id, completed: c })
+                    }
                   />
                   <span
                     className={
@@ -518,7 +609,7 @@ const ListView = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       onDeleteTask(task.id);
                     }}
@@ -540,7 +631,6 @@ const ListView = ({
     ))}
   </div>
 );
-
 const EisenhowerMatrixView = ({
   tasks,
   onTaskClick,
@@ -573,8 +663,11 @@ const EisenhowerMatrixView = ({
   }) => (
     <div
       className={`rounded-xl flex flex-col ${bgColor}`}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => onPriorityDrop(e.dataTransfer.getData("taskId"), priority)}
+      onDragOver={(e: React.DragEvent) => e.preventDefault()}
+      onDrop={(e: React.DragEvent) => {
+        e.preventDefault();
+        onPriorityDrop(e.dataTransfer.getData("taskId"), priority);
+      }}
     >
       <div className="p-4 border-b border-black/10 dark:border-white/10">
         <h3 className="font-bold text-gray-900 dark:text-gray-100">{title}</h3>
@@ -587,7 +680,9 @@ const EisenhowerMatrixView = ({
             onClick={() => onTaskClick(t)}
             className="p-2.5 bg-white/80 dark:bg-gray-950/80 rounded-lg cursor-pointer text-sm font-medium"
             draggable
-            onDragStart={(e) => e.dataTransfer.setData("taskId", t.id)}
+            onDragStart={(e: React.DragEvent) =>
+              e.dataTransfer.setData("taskId", t.id)
+            }
           >
             {t.name}
           </div>
@@ -654,6 +749,18 @@ export default function TasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
 
+  const { activeTasks, completedTasks } = useMemo(() => {
+    const allTasks = tasks.sort(
+      (a, b) =>
+        (a.date ? new Date(a.date).getTime() : Infinity) -
+        (b.date ? new Date(b.date).getTime() : Infinity)
+    );
+    return {
+      activeTasks: allTasks.filter((t) => !t.completed),
+      completedTasks: allTasks.filter((t) => t.completed),
+    };
+  }, [tasks]);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/sign-in");
@@ -694,21 +801,31 @@ export default function TasksPage() {
   const handleSaveTask = async (taskData: Partial<Task>) => {
     if (!user) return;
     const { id, ...dataToSave } = taskData;
-    if (id) {
-      await updateDoc(doc(db, "users", user.uid, "tasks", id), dataToSave);
-    } else {
-      await addDoc(collection(db, "users", user.uid, "tasks"), {
-        ...dataToSave,
-        createdAt: new Date(),
-        completed: false,
-      });
+    try {
+      if (id) {
+        await updateDoc(doc(db, "users", user.uid, "tasks", id), dataToSave);
+      } else {
+        await addDoc(collection(db, "users", user.uid, "tasks"), {
+          ...dataToSave,
+          createdAt: new Date().toISOString(),
+          completed: false,
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar tarefa:", error);
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     if (!user || !taskId) return;
-    await deleteDoc(doc(db, "users", user.uid, "tasks", taskId));
-    setIsModalOpen(false);
+    if (window.confirm("Tem certeza que deseja excluir esta tarefa?")) {
+      try {
+        await deleteDoc(doc(db, "users", user.uid, "tasks", taskId));
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error("Erro ao excluir tarefa:", error);
+      }
+    }
   };
 
   const handleTaskDrop = async (taskId: string, newColor: string) => {
@@ -728,12 +845,13 @@ export default function TasksPage() {
     });
   };
 
-  if (loading || !user)
+  if (loading || !user) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <p>Carregando...</p>
       </div>
     );
+  }
 
   return (
     <main className="flex-1 p-4 md:p-8">
@@ -745,7 +863,7 @@ export default function TasksPage() {
         task={editingTask}
         areas={areas}
       />
-      <div className="flex items-center justify-between mb-6">
+      <header className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-gray-900 p-1">
           <Button
             variant={view === "kanban" ? "default" : "ghost"}
@@ -767,29 +885,44 @@ export default function TasksPage() {
           </Button>
         </div>
         <Button onClick={() => handleOpenModal(null)}>Nova Tarefa</Button>
-      </div>
+      </header>
+
       {view === "kanban" && (
-        <KanbanView
-          tasks={tasks}
-          areas={areas}
-          onTaskClick={handleOpenModal}
-          onUpdateTask={handleSaveTask}
-          onTaskDrop={handleTaskDrop}
-        />
+        <>
+          <KanbanView
+            tasks={activeTasks}
+            areas={areas}
+            onTaskClick={handleOpenModal}
+            onUpdateTask={handleSaveTask}
+            onTaskDrop={handleTaskDrop}
+          />
+          <CompletedTasksDropdown
+            tasks={completedTasks}
+            onTaskClick={handleOpenModal}
+            onUpdateTask={handleSaveTask}
+          />
+        </>
       )}
       {view === "list" && (
-        <ListView
-          tasks={tasks}
-          areas={areas}
-          onTaskClick={handleOpenModal}
-          onUpdateTask={handleSaveTask}
-          onDeleteTask={handleDeleteTask}
-          onTaskDrop={handleTaskDrop}
-        />
+        <>
+          <ListView
+            tasks={activeTasks}
+            areas={areas}
+            onTaskClick={handleOpenModal}
+            onUpdateTask={handleSaveTask}
+            onDeleteTask={handleDeleteTask}
+            onTaskDrop={handleTaskDrop}
+          />
+          <CompletedTasksDropdown
+            tasks={completedTasks}
+            onTaskClick={handleOpenModal}
+            onUpdateTask={handleSaveTask}
+          />
+        </>
       )}
       {view === "matrix" && (
         <EisenhowerMatrixView
-          tasks={tasks}
+          tasks={activeTasks}
           onTaskClick={handleOpenModal}
           onPriorityDrop={handlePriorityDrop}
         />

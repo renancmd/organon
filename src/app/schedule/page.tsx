@@ -43,9 +43,7 @@ const availableColors = [
   "bg-pink-500",
 ];
 
-// --- Componentes UI Mock (Com Tipagem Refinada) ---
-// O componente Card foi removido pois não era utilizado.
-
+// --- Componentes UI ---
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "icon";
@@ -137,7 +135,6 @@ function EventModal({
     onSave(currentEvent);
     onClose();
   };
-
   const handleFieldChange = (field: keyof Event, value: string) =>
     setCurrentEvent((prev) => (prev ? { ...prev, [field]: value } : null));
 
@@ -168,9 +165,7 @@ function EventModal({
             <Label>Nome do Evento</Label>
             <Input
               value={currentEvent.name || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleFieldChange("name", e.target.value)
-              }
+              onChange={(e) => handleFieldChange("name", e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -178,9 +173,7 @@ function EventModal({
             <Input
               type="date"
               value={currentEvent.date || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleFieldChange("date", e.target.value)
-              }
+              onChange={(e) => handleFieldChange("date", e.target.value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -189,9 +182,7 @@ function EventModal({
               <Input
                 type="time"
                 value={currentEvent.startTime || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  handleFieldChange("startTime", e.target.value)
-                }
+                onChange={(e) => handleFieldChange("startTime", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -199,9 +190,7 @@ function EventModal({
               <Input
                 type="time"
                 value={currentEvent.endTime || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  handleFieldChange("endTime", e.target.value)
-                }
+                onChange={(e) => handleFieldChange("endTime", e.target.value)}
               />
             </div>
           </div>
@@ -209,18 +198,14 @@ function EventModal({
             <Label>Localização</Label>
             <Input
               value={currentEvent.location || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleFieldChange("location", e.target.value)
-              }
+              onChange={(e) => handleFieldChange("location", e.target.value)}
             />
           </div>
           <div className="space-y-2">
             <Label>Recorrência</Label>
             <Select
               value={currentEvent.recurrence || "Nenhuma"}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                handleFieldChange("recurrence", e.target.value)
-              }
+              onChange={(e) => handleFieldChange("recurrence", e.target.value)}
             >
               <option>Nenhuma</option>
               <option>Diário</option>
@@ -261,7 +246,7 @@ function EventModal({
   );
 }
 
-// --- Componente Calendário ---
+// --- Componente Calendário (Desktop) ---
 const CalendarView = ({
   onDateClick,
   events,
@@ -280,6 +265,7 @@ const CalendarView = ({
   const days = Array.from({ length: firstDay + daysInMonth }, (_, i) =>
     i < firstDay ? null : new Date(year, month, i - firstDay + 1)
   );
+
   return (
     <div className="grid grid-cols-7 gap-2">
       {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
@@ -335,6 +321,128 @@ const CalendarView = ({
                 </div>
               </>
             )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// --- NOVO Componente: Lista de Eventos do Dia ---
+const DailyEventList = ({
+  events,
+  onEventClick,
+  onDeleteClick,
+}: {
+  events: Event[];
+  onEventClick: (event: Event) => void;
+  onDeleteClick: (eventId: string) => void;
+}) => {
+  if (events.length === 0) {
+    return (
+      <p className="text-sm text-gray-500 text-center py-8">
+        Nenhum evento para este dia.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {events.map((event) => (
+        <div
+          key={event.id}
+          className="flex items-start gap-4 group relative p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"
+        >
+          <div
+            className={`w-1.5 h-full absolute left-0 top-0 bottom-0 rounded-l-lg ${event.color}`}
+          ></div>
+          <div
+            className="flex-1 cursor-pointer"
+            onClick={() => onEventClick(event)}
+          >
+            <p className="font-medium">{event.name}</p>
+            {event.location && (
+              <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
+                <MapPin className="w-3 h-3" />
+                {event.location}
+              </p>
+            )}
+            {event.startTime && (
+              <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1">
+                <Clock className="w-3 h-3" />
+                {event.startTime} {event.endTime && `- ${event.endTime}`}
+              </p>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => onDeleteClick(event.id)}
+          >
+            <Trash2 className="w-4 h-4 text-red-500" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// --- NOVO Componente: Visualização de Agenda para Mobile ---
+const MobileAgendaView = ({
+  events,
+  currentDate,
+  selectedDate,
+  onDateClick,
+}: {
+  events: Event[];
+  currentDate: Date;
+  selectedDate: Date;
+  onDateClick: (date: Date) => void;
+}) => {
+  const month = currentDate.getMonth();
+  const year = currentDate.getFullYear();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days = Array.from(
+    { length: daysInMonth },
+    (_, i) => new Date(year, month, i + 1)
+  );
+
+  return (
+    <div className="space-y-2">
+      {days.map((day, i) => {
+        const isSelected = day.toDateString() === selectedDate.toDateString();
+        const dayEvents = events.filter(
+          (e) => e.date === day.toISOString().split("T")[0]
+        );
+        return (
+          <div
+            key={i}
+            onClick={() => onDateClick(day)}
+            className={`p-3 rounded-lg flex items-center gap-4 cursor-pointer transition-colors ${
+              isSelected
+                ? "bg-gray-100 dark:bg-gray-800"
+                : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+            }`}
+          >
+            <div className="text-center w-10">
+              <p className="text-xs text-gray-500">
+                {day.toLocaleDateString("pt-BR", { weekday: "short" })}
+              </p>
+              <p className="font-bold text-lg">{day.getDate()}</p>
+            </div>
+            <div className="flex-1 flex flex-wrap gap-1.5">
+              {dayEvents.length > 0 ? (
+                dayEvents.map((e) => (
+                  <div
+                    key={e.id}
+                    className={`w-2 h-2 rounded-full ${e.color}`}
+                    title={e.name}
+                  ></div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-400">Sem eventos</p>
+              )}
+            </div>
           </div>
         );
       })}
@@ -406,7 +514,8 @@ export default function AgendaPage() {
     );
 
   return (
-    <div className="flex flex-1 h-[calc(100vh-4rem)]">
+    // Layout principal que se adapta: flex-col no mobile, flex-row no desktop
+    <div className="flex flex-col lg:flex-row flex-1 h-[calc(100vh-4rem)]">
       <EventModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -415,7 +524,9 @@ export default function AgendaPage() {
         event={editingEvent}
         selectedDate={selectedDate}
       />
-      <main className="flex-1 p-6 lg:p-8">
+
+      {/* Coluna principal (Calendário) */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
           <h2 className="text-2xl font-bold">
             {currentDate.toLocaleString("pt-BR", {
@@ -454,14 +565,62 @@ export default function AgendaPage() {
             </Button>
           </div>
         </div>
-        <CalendarView
-          onDateClick={setSelectedDate}
-          events={events}
-          currentDate={currentDate}
-          selectedDate={selectedDate}
-        />
+
+        {/* Botão de Novo Evento para Mobile */}
+        <div className="mb-4 lg:hidden">
+          <Button
+            onClick={() =>
+              handleOpenModal({
+                name: "",
+                color: availableColors[0],
+                recurrence: "Nenhuma",
+              })
+            }
+            className="w-full"
+          >
+            Novo Evento
+          </Button>
+        </div>
+
+        {/* Calendário de Desktop */}
+        <div className="hidden lg:block">
+          <CalendarView
+            onDateClick={setSelectedDate}
+            events={events}
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+          />
+        </div>
+
+        {/* Agenda de Mobile */}
+        <div className="lg:hidden">
+          <MobileAgendaView
+            onDateClick={setSelectedDate}
+            events={events}
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+          />
+        </div>
+
+        {/* Lista de eventos do dia para Mobile */}
+        <div className="mt-8 lg:hidden">
+          <h3 className="font-semibold text-lg mb-4">
+            {selectedDate.toLocaleDateString("pt-BR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </h3>
+          <DailyEventList
+            events={selectedDayEvents}
+            onEventClick={handleOpenModal}
+            onDeleteClick={handleDeleteEvent}
+          />
+        </div>
       </main>
-      <aside className="w-full lg:w-96 border-l dark:border-gray-800 p-6 flex flex-col gap-6 overflow-y-auto">
+
+      {/* Coluna Lateral (Eventos do dia) - Apenas Desktop */}
+      <aside className="hidden lg:flex w-full lg:w-96 border-l dark:border-gray-800 p-6 flex-col gap-6 overflow-y-auto">
         <Button
           onClick={() =>
             handleOpenModal({
@@ -481,51 +640,11 @@ export default function AgendaPage() {
               month: "long",
             })}
           </h3>
-          <div className="space-y-3">
-            {selectedDayEvents.length > 0 ? (
-              selectedDayEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-start gap-4 group relative p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"
-                >
-                  <div
-                    className={`w-1.5 h-full absolute left-0 top-0 bottom-0 rounded-l-lg ${event.color}`}
-                  ></div>
-                  <div
-                    className="flex-1 cursor-pointer"
-                    onClick={() => handleOpenModal(event)}
-                  >
-                    <p className="font-medium">{event.name}</p>
-                    {event.location && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
-                        <MapPin className="w-3 h-3" />
-                        {event.location}
-                      </p>
-                    )}
-                    {event.startTime && (
-                      <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1">
-                        <Clock className="w-3 h-3" />
-                        {event.startTime}{" "}
-                        {event.endTime && `- ${event.endTime}`}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleDeleteEvent(event.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-8">
-                Nenhum evento para este dia.
-              </p>
-            )}
-          </div>
+          <DailyEventList
+            events={selectedDayEvents}
+            onEventClick={handleOpenModal}
+            onDeleteClick={handleDeleteEvent}
+          />
         </div>
       </aside>
     </div>

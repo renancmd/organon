@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import Link from "next/link"; // 1. Importado o Link
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation"; // Hook para pegar a rota atual
 import {
   Home,
   ListChecks,
@@ -10,14 +11,26 @@ import {
   GanttChart,
   CircleUserRound,
   Bell,
+  Menu,
+  X,
 } from "lucide-react";
 
-// Componente da Barra Lateral (reutilizado e corrigido)
+// --- DADOS DE NAVEGAÇÃO CENTRALIZADOS ---
+const navItems = [
+  { href: "/", icon: Home, label: "Início" },
+  { href: "/tasks", icon: ListChecks, label: "Tarefas" },
+  { href: "/schedule", icon: CalendarDays, label: "Agenda" },
+  { href: "/habits", icon: Repeat, label: "Hábitos" },
+  { href: "/daily-journal", icon: GanttChart, label: "Diário" },
+];
+
+// --- COMPONENTE SIDEBAR (Desktop com link ativo dinâmico) ---
 function Sidebar() {
+  const pathname = usePathname(); // Pega a rota atual
+
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r bg-white dark:bg-gray-950 dark:border-gray-800 md:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-        {/* 2. Todos os <a> foram trocados por <Link> */}
         <Link
           href="/"
           className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900 md:h-8 md:w-8 md:text-base"
@@ -25,41 +38,29 @@ function Sidebar() {
         >
           <span className="text-xl">O</span>
         </Link>
-        <Link
-          href="/"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
-        >
-          <Home className="h-5 w-5" />
-        </Link>
-        <Link
-          href="/tasks"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
-        >
-          <ListChecks className="h-5 w-5" />
-        </Link>
-        <Link
-          href="/schedule"
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50"
-        >
-          <CalendarDays className="h-5 w-5" />
-        </Link>
-        <Link
-          href="/habits"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
-        >
-          <Repeat className="h-5 w-5" />
-        </Link>
-        <Link
-          href="/daily-journal"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
-        >
-          <GanttChart className="h-5 w-5" />
-        </Link>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:text-gray-900 dark:hover:text-gray-50 ${
+                isActive
+                  ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
+                  : "text-gray-500 dark:text-gray-400"
+              }`}
+              title={item.label}
+            >
+              <item.icon className="h-5 w-5" />
+            </Link>
+          );
+        })}
       </nav>
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
           href="/perfil"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+          title="Perfil"
         >
           <CircleUserRound className="h-5 w-5" />
         </Link>
@@ -68,6 +69,7 @@ function Sidebar() {
   );
 }
 
+// --- COMPONENTE BOTÃO ---
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "icon";
@@ -100,18 +102,95 @@ const Button = ({
   );
 };
 
+// --- COMPONENTE LAYOUT PRINCIPAL DA AGENDA ---
 export default function AgendaLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
   return (
     <div className="min-h-screen w-full flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <Sidebar />
+
+      {/* --- MENU MOBILE --- */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed top-0 left-0 z-50 h-full w-72 transform bg-white p-6 shadow-xl transition-transform duration-300 ease-in-out dark:bg-gray-950 md:hidden ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-xl font-bold">Organon</h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(false)}
+            className="h-8 w-8"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        <nav className="flex flex-col gap-2">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
+                  isActive
+                    ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50"
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="absolute bottom-6 left-0 w-full px-6">
+          <Link
+            href="/perfil"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
+              pathname === "/perfil"
+                ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
+                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50"
+            }`}
+          >
+            <CircleUserRound className="h-5 w-5" />
+            Perfil
+          </Link>
+        </div>
+      </aside>
+
+      {/* --- CONTEÚDO PRINCIPAL DA PÁGINA --- */}
       <div className="flex flex-col flex-1 md:ml-20">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm px-6">
-          <h1 className="text-xl font-semibold">Agenda</h1>
-          <div>
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm px-4 md:px-6">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+            <h1 className="text-xl font-semibold">Agenda</h1>
+          </div>
+
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"

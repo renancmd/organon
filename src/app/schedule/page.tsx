@@ -31,6 +31,7 @@ type Event = {
   color: string;
   location?: string;
   recurrence?: "Nenhuma" | "Diário" | "Semanal" | "Mensal";
+  createdAt?: Date; // Adicionado para consistência
 };
 
 const availableColors = [
@@ -42,7 +43,7 @@ const availableColors = [
   "bg-pink-500",
 ];
 
-// --- Componentes UI Mock ---
+// --- Componentes UI Mock (Com Tipagem Refinada) ---
 const Card = ({
   children,
   className = "",
@@ -56,15 +57,19 @@ const Card = ({
     {children}
   </div>
 );
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "ghost" | "outline";
+  size?: "default" | "icon";
+};
+
 const Button = ({
   children,
   className = "",
+  variant = "default",
+  size = "default",
   ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  [key: string]: any;
-}) => {
+}: ButtonProps) => {
   const baseClasses =
     "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors disabled:opacity-50";
   const variantClasses = {
@@ -76,49 +81,38 @@ const Button = ({
   const sizeClasses = { default: "h-10 py-2 px-4", icon: "h-9 w-9" };
   return (
     <button
-      className={`${baseClasses} ${
-        variantClasses[props.variant || "default"]
-      } ${sizeClasses[props.size || "default"]} ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
       {children}
     </button>
   );
 };
-const Input = ({ className = "", ...props }: { [key: string]: any }) => (
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Label = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
     {...props}
     className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
   >
-    {" "}
-    {children}{" "}
+    {props.children}
   </label>
 );
-const Select = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
     {...props}
     className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800`}
   >
-    {" "}
-    {children}{" "}
+    {props.children}
   </select>
 );
 
@@ -142,7 +136,6 @@ function EventModal({
 
   useEffect(() => {
     if (event) {
-      // Se for um novo evento, pré-preenche com a data selecionada no calendário
       const initialEvent = event.id
         ? event
         : { ...event, date: selectedDate.toISOString().split("T")[0] };
@@ -156,7 +149,8 @@ function EventModal({
     onSave(currentEvent);
     onClose();
   };
-  const handleFieldChange = (field: keyof Event, value: any) =>
+
+  const handleFieldChange = (field: keyof Event, value: string | undefined) =>
     setCurrentEvent((prev) => (prev ? { ...prev, [field]: value } : null));
 
   return (
@@ -186,7 +180,9 @@ function EventModal({
             <Label>Nome do Evento</Label>
             <Input
               value={currentEvent.name || ""}
-              onChange={(e) => handleFieldChange("name", e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleFieldChange("name", e.target.value)
+              }
             />
           </div>
           <div className="space-y-2">
@@ -194,7 +190,9 @@ function EventModal({
             <Input
               type="date"
               value={currentEvent.date || ""}
-              onChange={(e) => handleFieldChange("date", e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleFieldChange("date", e.target.value)
+              }
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -203,7 +201,9 @@ function EventModal({
               <Input
                 type="time"
                 value={currentEvent.startTime || ""}
-                onChange={(e) => handleFieldChange("startTime", e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleFieldChange("startTime", e.target.value)
+                }
               />
             </div>
             <div className="space-y-2">
@@ -211,7 +211,9 @@ function EventModal({
               <Input
                 type="time"
                 value={currentEvent.endTime || ""}
-                onChange={(e) => handleFieldChange("endTime", e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleFieldChange("endTime", e.target.value)
+                }
               />
             </div>
           </div>
@@ -219,14 +221,21 @@ function EventModal({
             <Label>Localização</Label>
             <Input
               value={currentEvent.location || ""}
-              onChange={(e) => handleFieldChange("location", e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleFieldChange("location", e.target.value)
+              }
             />
           </div>
           <div className="space-y-2">
             <Label>Recorrência</Label>
             <Select
               value={currentEvent.recurrence || "Nenhuma"}
-              onChange={(e) => handleFieldChange("recurrence", e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                handleFieldChange(
+                  "recurrence",
+                  e.target.value as Event["recurrence"]
+                )
+              }
             >
               <option>Nenhuma</option>
               <option>Diário</option>
@@ -279,7 +288,6 @@ const CalendarView = ({
   currentDate: Date;
   selectedDate: Date;
 }) => {
-  // ... (Lógica do calendário inalterada) ...
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
   const firstDay = new Date(year, month, 1).getDay();
@@ -436,7 +444,10 @@ export default function AgendaPage() {
               size="icon"
               onClick={() =>
                 setCurrentDate(
-                  new Date(currentDate.setMonth(currentDate.getMonth() - 1))
+                  (prevDate) =>
+                    new Date(
+                      new Date(prevDate).setMonth(prevDate.getMonth() - 1)
+                    )
                 )
               }
             >
@@ -453,7 +464,10 @@ export default function AgendaPage() {
               size="icon"
               onClick={() =>
                 setCurrentDate(
-                  new Date(currentDate.setMonth(currentDate.getMonth() + 1))
+                  (prevDate) =>
+                    new Date(
+                      new Date(prevDate).setMonth(prevDate.getMonth() + 1)
+                    )
                 )
               }
             >

@@ -34,9 +34,10 @@ type JournalEntry = {
   gratitude: string;
   memory: string;
   attachments?: Attachment[];
+  date?: string; // Adicionado para consistência
 };
 
-// --- Componentes UI Mock ---
+// --- Componentes UI Mock (Com Tipagem Refinada) ---
 const Card = ({
   children,
   className = "",
@@ -76,15 +77,19 @@ const CardFooter = ({
     {children}
   </div>
 );
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "ghost" | "outline";
+  size?: "default" | "icon";
+};
+
 const Button = ({
   children,
   className = "",
+  variant = "default",
+  size = "default",
   ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  [key: string]: any;
-}) => {
+}: ButtonProps) => {
   const base =
     "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
   const variants = {
@@ -96,46 +101,38 @@ const Button = ({
   const sizes = { default: "h-10 py-2 px-4", icon: "h-9 w-9" };
   return (
     <button
-      className={`${base} ${variants[props.variant || "default"]} ${
-        sizes[props.size || "default"]
-      } ${className}`}
+      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}
     </button>
   );
 };
-const Input = ({ className = "", ...props }: { [key: string]: any }) => (
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Label = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
     {...props}
     className="text-sm font-medium text-gray-600 dark:text-gray-400"
   >
-    {" "}
-    {children}{" "}
+    {props.children}
   </label>
 );
-const Textarea = ({
-  className = "",
-  ...props
-}: {
-  className?: string;
-  [key: string]: any;
-}) => (
+
+const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className={`flex min-h-[120px] w-full rounded-md border border-gray-200 bg-transparent p-3 text-sm dark:border-gray-800 ${className}`}
+    className={`flex min-h-[120px] w-full rounded-md border border-gray-200 bg-transparent p-3 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
 
@@ -241,7 +238,7 @@ export default function DailyJournalPage() {
               type="date"
               className="pl-10"
               value={toYYYYMMDD(selectedDate)}
-              onChange={(e) =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setSelectedDate(new Date(e.target.value + "T00:00:00"))
               }
             />
@@ -266,7 +263,7 @@ export default function DailyJournalPage() {
                 <Textarea
                   placeholder="Escreva aqui..."
                   value={journalEntry.gratitude}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                     setJournalEntry({
                       ...journalEntry,
                       gratitude: e.target.value,
@@ -279,7 +276,7 @@ export default function DailyJournalPage() {
                 <Textarea
                   placeholder="Escreva aqui..."
                   value={journalEntry.memory}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                     setJournalEntry({ ...journalEntry, memory: e.target.value })
                   }
                 />
@@ -305,7 +302,7 @@ export default function DailyJournalPage() {
                       <Check className="w-4 h-4 text-green-500" />
                       {t.name}
                     </li>
-                  ))}{" "}
+                  ))}
                   {dailyData.tasks.length === 0 && (
                     <li className="text-sm text-gray-500">Nenhuma tarefa.</li>
                   )}
@@ -320,7 +317,7 @@ export default function DailyJournalPage() {
                     <li key={e.id} className="text-sm">
                       {e.startTime} - {e.name}
                     </li>
-                  ))}{" "}
+                  ))}
                   {dailyData.events.length === 0 && (
                     <li className="text-sm text-gray-500">Nenhum evento.</li>
                   )}
@@ -336,7 +333,7 @@ export default function DailyJournalPage() {
                     <li key={h.id} className="text-sm">
                       {h.name}
                     </li>
-                  ))}{" "}
+                  ))}
                   {dailyData.habits.length === 0 && (
                     <li className="text-sm text-gray-500">Nenhum hábito.</li>
                   )}

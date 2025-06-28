@@ -1,15 +1,10 @@
-// app/login/page.tsx
-// Página de Login funcional para o aplicativo Organon.
-
 "use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-// --- Componentes de UI (Mantidos como no original) ---
-// Em um projeto maior, estes componentes provavelmente seriam importados
-// de um diretório separado (ex: /components/ui).
+// --- Componentes de UI (Com Tipagem Refinada) ---
 
 const Card = ({
   children,
@@ -44,46 +39,33 @@ const CardContent = ({
   children: React.ReactNode;
   className?: string;
 }) => <div className={`p-6 ${className}`}>{children}</div>;
-const Button = ({
-  children,
-  className = "",
-  ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  [key: string]: any;
-}) => (
+
+const Button = (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button
-    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors w-full h-10 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900 disabled:opacity-50 ${className}`}
+    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors w-full h-10 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900 disabled:opacity-50 ${
+      props.className || ""
+    }`}
     {...props}
   >
-    {children}
+    {props.children}
   </button>
 );
-const Input = ({
-  className = "",
-  ...props
-}: {
-  className?: string;
-  [key: string]: any;
-}) => (
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Label = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
     className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
     {...props}
   >
-    {children}
+    {props.children}
   </label>
 );
 
@@ -93,7 +75,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Hooks reais do Next.js e do Contexto de Autenticação
   const router = useRouter();
   const { signIn } = useAuth();
 
@@ -103,13 +84,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Chama a função de login real do AuthContext
       await signIn(email, password);
-      router.push("/"); // Redireciona para o dashboard após o sucesso
+      router.push("/");
     } catch (err: any) {
-      // Trata o erro retornado pelo Firebase
       console.error("Falha no login:", err);
-      // Fornece uma mensagem de erro mais genérica para o usuário
       setError("E-mail ou senha inválidos. Tente novamente.");
     } finally {
       setLoading(false);
@@ -142,7 +120,9 @@ export default function LoginPage() {
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEmail(e.target.value)
+                  } // CORRIGIDO
                   required
                   disabled={loading}
                 />
@@ -151,7 +131,7 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Senha</Label>
                   <a
-                    href="/recuperar-senha"
+                    href="/lost-password"
                     className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500"
                   >
                     Esqueci minha senha
@@ -161,7 +141,9 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setPassword(e.target.value)
+                  } // CORRIGIDO
                   required
                   disabled={loading}
                 />
@@ -175,7 +157,7 @@ export default function LoginPage() {
           <div className="p-6 pt-0 text-center text-sm text-gray-600 dark:text-gray-400">
             Não tem uma conta?{" "}
             <a
-              href="/registro"
+              href="/sign-up"
               className="font-medium text-blue-600 hover:underline dark:text-blue-500"
             >
               Registre-se

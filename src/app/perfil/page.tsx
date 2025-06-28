@@ -11,10 +11,9 @@ import {
   onSnapshot,
   addDoc,
   deleteDoc,
-  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { X, Trash2, Edit, Camera, LogOut } from "lucide-react";
+import { X, Trash2, Edit, LogOut } from "lucide-react";
 
 // --- Estruturas de Dados ---
 type Area = { id: string; name: string; color: string };
@@ -31,7 +30,7 @@ const availableColors = [
   "bg-teal-500",
 ];
 
-// --- Componentes UI Mock (Simplificados) ---
+// --- Componentes UI Mock (Com Tipagem Refinada) ---
 const Card = ({
   children,
   className = "",
@@ -71,43 +70,54 @@ const CardFooter = ({
     {children}
   </div>
 );
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "ghost" | "outline";
+  size?: "default" | "icon";
+};
+
 const Button = ({
   children,
   className = "",
+  variant = "default",
+  size = "default",
   ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  [key: string]: any;
-}) => (
-  <button
-    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900 disabled:opacity-50 ${className}`}
-    {...props}
-  >
-    {children}
-  </button>
-);
-const Input = ({
-  className = "",
-  ...props
-}: {
-  className?: string;
-  [key: string]: any;
-}) => (
+}: ButtonProps) => {
+  const base =
+    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors disabled:opacity-50";
+  const variants = {
+    default:
+      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
+    ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
+    outline: "border border-gray-200 dark:border-gray-700",
+  };
+  const sizes = {
+    default: "h-10 px-4 py-2",
+    icon: "h-8 w-8",
+  };
+
+  return (
+    <button
+      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
     {...props}
   />
 );
-const Label = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label className="text-sm font-medium leading-none" {...props}>
-    {children}
+    {props.children}
   </label>
 );
 
@@ -123,7 +133,6 @@ function AreaModal({
   onSave: (area: Partial<Area>) => void;
   area: Partial<Area> | null;
 }) {
-  // Componente Modal para criar/editar áreas...
   const [currentArea, setCurrentArea] = useState(area);
   useEffect(() => {
     setCurrentArea(area);
@@ -150,10 +159,10 @@ function AreaModal({
           <Label>Nome</Label>
           <Input
             value={currentArea.name || ""}
-            onChange={(e) =>
-              setCurrentArea({ ...currentArea, name: e.target.value })
-            }
-          />{" "}
+            onChange={(
+              e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
+            ) => setCurrentArea({ ...currentArea, name: e.target.value })}
+          />
           <Label>Cor</Label>
           <div className="flex flex-wrap gap-2 pt-2">
             {availableColors.map((c) => (
@@ -168,7 +177,9 @@ function AreaModal({
           </div>
         </div>
         <div className="p-6 border-t flex justify-end">
-          <Button onClick={() => onSave(currentArea)}>Salvar</Button>
+          <Button onClick={() => currentArea && onSave(currentArea)}>
+            Salvar
+          </Button>
         </div>
       </div>
     </div>
@@ -184,10 +195,8 @@ export default function ProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Partial<Area> | null>(null);
 
-  // Efeito para buscar os dados do perfil e ouvir as áreas em tempo real
   useEffect(() => {
     if (user) {
-      // Busca os dados do perfil uma vez
       const fetchProfile = async () => {
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
@@ -199,7 +208,6 @@ export default function ProfilePage() {
       };
       fetchProfile();
 
-      // Ouve as mudanças nas áreas em tempo real
       const areasCollectionRef = collection(db, "users", user.uid, "areas");
       const unsubscribe = onSnapshot(areasCollectionRef, (querySnapshot) => {
         const areasData = querySnapshot.docs.map(
@@ -208,15 +216,18 @@ export default function ProfilePage() {
         setAreas(areasData);
       });
 
-      return () => unsubscribe(); // Limpa o ouvinte ao desmontar
+      return () => unsubscribe();
     }
   }, [user]);
 
-  // Redireciona se não houver usuário após o carregamento inicial
-  if (loading) return <p>Carregando...</p>;
-  if (!user) {
-    router.push("/sign-in");
-    return null;
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/sign-in");
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return <p>Carregando...</p>;
   }
 
   const handleOpenModal = (area: Partial<Area> | null) => {
@@ -225,32 +236,34 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = async () => {
-    if (profile) {
+    if (profile && user) {
       const docRef = doc(db, "users", user.uid);
-      await updateDoc(docRef, profile);
+      await updateDoc(docRef, { name: profile.name });
       alert("Perfil salvo com sucesso!");
     }
   };
 
   const handleSaveArea = async (areaData: Partial<Area>) => {
-    if (areaData.id) {
-      // Editando
-      const docRef = doc(db, "users", user.uid, "areas", areaData.id);
-      await updateDoc(docRef, { name: areaData.name, color: areaData.color });
-    } else {
-      // Criando
-      const collectionRef = collection(db, "users", user.uid, "areas");
-      await addDoc(collectionRef, {
-        name: areaData.name,
-        color: areaData.color,
-      });
+    if (user && areaData.name) {
+      if (areaData.id) {
+        const docRef = doc(db, "users", user.uid, "areas", areaData.id);
+        await updateDoc(docRef, { name: areaData.name, color: areaData.color });
+      } else {
+        const collectionRef = collection(db, "users", user.uid, "areas");
+        await addDoc(collectionRef, {
+          name: areaData.name,
+          color: areaData.color,
+        });
+      }
     }
     setIsModalOpen(false);
   };
 
   const handleDeleteArea = async (areaId: string) => {
-    const docRef = doc(db, "users", user.uid, "areas", areaId);
-    await deleteDoc(docRef);
+    if (user) {
+      const docRef = doc(db, "users", user.uid, "areas", areaId);
+      await deleteDoc(docRef);
+    }
   };
 
   return (
@@ -272,7 +285,9 @@ export default function ProfilePage() {
               <Input
                 id="name"
                 value={profile?.name || ""}
-                onChange={(e) =>
+                onChange={(
+                  e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
+                ) =>
                   setProfile((p) => (p ? { ...p, name: e.target.value } : null))
                 }
               />
@@ -284,6 +299,7 @@ export default function ProfilePage() {
                 type="email"
                 value={profile?.email || ""}
                 readOnly
+                className="bg-gray-100 dark:bg-gray-800"
               />
             </div>
           </CardContent>
@@ -306,11 +322,10 @@ export default function ProfilePage() {
                   <div className={`w-4 h-4 rounded-full ${area.color}`}></div>
                   <span className="font-medium">{area.name}</span>
                 </div>
-                <div className="opacity-0 group-hover:opacity-100">
+                <div className="opacity-0 group-hover:opacity-100 flex">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
                     onClick={() => handleOpenModal(area)}
                   >
                     <Edit className="w-4 h-4" />
@@ -318,7 +333,6 @@ export default function ProfilePage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
                     onClick={() => handleDeleteArea(area.id)}
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />

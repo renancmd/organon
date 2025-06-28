@@ -104,15 +104,21 @@ const CardContent = ({
 const CardFooter = ({ children }: { children: React.ReactNode }) => (
   <div className="flex items-center p-6 pt-0">{children}</div>
 );
+
+// CORREÇÃO 1: TIPAGEM DO BOTÃO
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  children: React.ReactNode;
+  variant?: "default" | "ghost" | "outline";
+  size?: "default" | "icon";
+};
+
 const Button = ({
   children,
   className = "",
+  variant = "default",
+  size = "default",
   ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  [key: string]: any;
-}) => {
+}: ButtonProps) => {
   const base =
     "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
   const variants = {
@@ -124,15 +130,14 @@ const Button = ({
   const sizes = { default: "h-10 px-4 py-2", icon: "h-9 w-9" };
   return (
     <button
-      className={`${base} ${variants[props.variant || "default"]} ${
-        sizes[props.size || "default"]
-      } ${className}`}
+      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}
     </button>
   );
 };
+
 const Checkbox = ({
   id,
   checked,
@@ -152,48 +157,33 @@ const Checkbox = ({
     />
   </div>
 );
-const Textarea = ({
-  className = "",
-  ...props
-}: {
-  className?: string;
-  [key: string]: any;
-}) => (
+const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
-    className={`flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm ${className}`}
+    className={`flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm ${
+      props.className || ""
+    }`}
     {...props}
   />
 );
-const Label = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label className="text-sm font-medium" {...props}>
-    {children}
+    {props.children}
   </label>
 );
-const Input = ({ className = "", ...props }: { [key: string]: any }) => (
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Select = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
     {...props}
     className="h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800"
   >
-    {" "}
-    {children}{" "}
+    {props.children}
   </select>
 );
 const Tabs = ({ children }: { children: React.ReactNode }) => (
@@ -274,13 +264,15 @@ const TaskDetailModal = ({
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
           <Input
             value={currentTask.name || ""}
-            onChange={(e) =>
+            // CORREÇÃO 2.1: TIPO DE EVENTO
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setCurrentTask({ ...currentTask, name: e.target.value })
             }
           />
           <Textarea
             value={currentTask.description || ""}
-            onChange={(e) =>
+            // CORREÇÃO 2.2: TIPO DE EVENTO
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setCurrentTask({ ...currentTask, description: e.target.value })
             }
           />
@@ -344,7 +336,8 @@ const EventDetailModal = ({
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           <Input
             value={currentEvent.name || ""}
-            onChange={(e) =>
+            // CORREÇÃO 2.3: TIPO DE EVENTO
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setCurrentEvent({ ...currentEvent, name: e.target.value })
             }
           />
@@ -430,7 +423,7 @@ const DailySummaryCard = ({
   events: Event[];
   onTaskClick: (t: Task) => void;
   onEventClick: (e: Event) => void;
-  onUpdateTask: (t: Task) => void;
+  onUpdateTask: (t: Partial<Task>) => void; // Corrigido para Partial<Task> para corresponder ao uso
 }) => {
   const [activeTab, setActiveTab] = useState<
     "today" | "tomorrow" | "next7days"
@@ -462,11 +455,14 @@ const DailySummaryCard = ({
       case "next7days":
         return {
           tasks: tasks.filter((t) => {
-            const d = t.date ? new Date(t.date + "T00:00:00") : null;
-            return d && d >= today && d <= sevenDaysFromNow && !t.completed;
+            if (!t.date) return false;
+            const d = new Date(t.date);
+            d.setUTCHours(0, 0, 0, 0);
+            return d >= today && d <= sevenDaysFromNow && !t.completed;
           }),
           events: events.filter((e) => {
-            const d = new Date(e.date + "T00:00:00");
+            const d = new Date(e.date);
+            d.setUTCHours(0, 0, 0, 0);
             return d >= today && d <= sevenDaysFromNow;
           }),
           isRange: true,
@@ -480,6 +476,7 @@ const DailySummaryCard = ({
     new Date(dateString + "T00:00:00").toLocaleDateString("pt-BR", {
       weekday: "short",
       day: "numeric",
+      timeZone: "UTC",
     });
 
   return (
@@ -518,7 +515,9 @@ const DailySummaryCard = ({
                     <Checkbox
                       id={task.id}
                       checked={task.completed}
-                      onChange={(c) => onUpdateTask({ ...task, completed: c })}
+                      onChange={(c) =>
+                        onUpdateTask({ id: task.id, completed: c })
+                      }
                     />
                     <div
                       className={`w-2 h-2 rounded-full ${task.color} shrink-0`}
@@ -600,7 +599,10 @@ const JournalCard = ({
           <Textarea
             placeholder="Escreva aqui..."
             value={entry.gratitude}
-            onChange={(e) => setEntry({ ...entry, gratitude: e.target.value })}
+            // CORREÇÃO 2.4: TIPO DE EVENTO
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              setEntry({ ...entry, gratitude: e.target.value })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -608,7 +610,10 @@ const JournalCard = ({
           <Textarea
             placeholder="Escreva aqui..."
             value={entry.memory}
-            onChange={(e) => setEntry({ ...entry, memory: e.target.value })}
+            // CORREÇÃO 2.5: TIPO DE EVENTO
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              setEntry({ ...entry, memory: e.target.value })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -716,14 +721,17 @@ export default function HomePage() {
     memory: "",
   });
 
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Partial<Task> | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Partial<Event> | null>(
+    null
+  );
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   useEffect(() => {
-    if (!user && !loading) {
+    if (!loading && !user) {
       router.push("/login");
+      return;
     }
     if (user) {
       const unsubTasks = onSnapshot(
@@ -776,7 +784,8 @@ export default function HomePage() {
 
   const handleSaveTask = async (task: Partial<Task>) => {
     if (!user || !task.id) return;
-    await updateDoc(doc(db, "users", user.uid, "tasks", task.id), task);
+    const taskRef = doc(db, "users", user.uid, "tasks", task.id);
+    await updateDoc(taskRef, task);
   };
   const handleDeleteTask = async (taskId: string) => {
     if (!user) return;
@@ -799,11 +808,13 @@ export default function HomePage() {
     const currentProgress = habit.dailyProgress?.[todayStr] || 0;
     const newProgress = Math.max(0, currentProgress + amount);
     const dailyProgress = { ...habit.dailyProgress, [todayStr]: newProgress };
+
     // Lógica de Streak simplificada
     const newStreak =
       newProgress >= habit.goal && currentProgress < habit.goal
         ? (habit.streak || 0) + 1
         : habit.streak;
+
     await updateDoc(doc(db, "users", user.uid, "habits", habit.id), {
       dailyProgress,
       streak: newStreak,
@@ -860,8 +871,8 @@ export default function HomePage() {
             <DailySummaryCard
               tasks={tasks}
               events={events}
-              onTaskClick={setSelectedTask}
-              onEventClick={setSelectedEvent}
+              onTaskClick={(task) => setSelectedTask(task)}
+              onEventClick={(event) => setSelectedEvent(event)}
               onUpdateTask={handleSaveTask}
             />
             <JournalCard

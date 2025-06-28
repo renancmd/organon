@@ -36,18 +36,15 @@ type Task = {
   subtasks: SubTask[];
   color: string; // Cor da Área
   attachments?: Attachment[];
+  createdAt?: Date; // Adicionado para consistência
 };
 
-// --- Componentes UI Mock (Simplificados) ---
+// --- Componentes UI Mock (Com Tipagem Refinada) ---
 const Card = ({
   children,
   className = "",
   ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  [key: string]: any;
-}) => (
+}: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     {...props}
     className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
@@ -55,6 +52,7 @@ const Card = ({
     {children}
   </div>
 );
+
 const Checkbox = ({
   id,
   checked,
@@ -74,19 +72,19 @@ const Checkbox = ({
     />
   </div>
 );
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "ghost" | "outline";
+  size?: "default" | "icon";
+};
+
 const Button = ({
   children,
   className = "",
   variant = "default",
   size = "default",
   ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  variant?: "default" | "ghost" | "outline";
-  size?: "default" | "icon";
-  [key: string]: any;
-}) => {
+}: ButtonProps) => {
   const base =
     "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
   const variants = {
@@ -105,46 +103,40 @@ const Button = ({
     </button>
   );
 };
-const Input = ({ className = "", ...props }: { [key: string]: any }) => (
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Textarea = ({ className = "", ...props }: { [key: string]: any }) => (
+
+const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className={`flex min-h-[80px] w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex min-h-[80px] w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Label = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
     {...props}
     className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
   >
-    {" "}
-    {children}{" "}
+    {props.children}
   </label>
 );
-const Select = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
     {...props}
     className="h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800"
   >
-    {" "}
-    {children}{" "}
+    {props.children}
   </select>
 );
 
@@ -233,14 +225,16 @@ function TaskModal({
           <Input
             placeholder="Nome da Tarefa"
             value={currentTask.name || ""}
-            onChange={(e) =>
-              setCurrentTask({ ...currentTask, name: e.target.value })
-            }
+            onChange={(
+              e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
+            ) => setCurrentTask({ ...currentTask, name: e.target.value })}
           />
           <Textarea
             placeholder="Descrição..."
             value={currentTask.description || ""}
-            onChange={(e) =>
+            onChange={(
+              e: React.ChangeEvent<HTMLTextAreaElement> // CORRIGIDO
+            ) =>
               setCurrentTask({ ...currentTask, description: e.target.value })
             }
           />
@@ -250,9 +244,9 @@ function TaskModal({
               <Input
                 type="date"
                 value={currentTask.date || ""}
-                onChange={(e) =>
-                  setCurrentTask({ ...currentTask, date: e.target.value })
-                }
+                onChange={(
+                  e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
+                ) => setCurrentTask({ ...currentTask, date: e.target.value })}
               />
             </div>
             <div>
@@ -260,9 +254,9 @@ function TaskModal({
               <Input
                 type="time"
                 value={currentTask.time || ""}
-                onChange={(e) =>
-                  setCurrentTask({ ...currentTask, time: e.target.value })
-                }
+                onChange={(
+                  e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
+                ) => setCurrentTask({ ...currentTask, time: e.target.value })}
               />
             </div>
           </div>
@@ -271,7 +265,9 @@ function TaskModal({
               <Label>Prioridade</Label>
               <Select
                 value={currentTask.priority || "Média"}
-                onChange={(e) =>
+                onChange={(
+                  e: React.ChangeEvent<HTMLSelectElement> // CORRIGIDO
+                ) =>
                   setCurrentTask({
                     ...currentTask,
                     priority: e.target.value as Task["priority"],
@@ -315,9 +311,9 @@ function TaskModal({
                   />
                   <Input
                     value={sub.name}
-                    onChange={(e) =>
-                      handleSubtaskChange(i, "name", e.target.value)
-                    }
+                    onChange={(
+                      e: React.ChangeEvent<HTMLInputElement> // CORRIGIDO
+                    ) => handleSubtaskChange(i, "name", e.target.value)}
                     className="h-8"
                   />
                   <Button
@@ -373,7 +369,7 @@ const KanbanView = ({
   tasks: Task[];
   areas: Area[];
   onTaskClick: (t: Task) => void;
-  onUpdateTask: (t: Task) => void;
+  onUpdateTask: (t: Partial<Task>) => void; // MODIFICADO para Partial<Task>
   onTaskDrop: (taskId: string, newColor: string) => void;
 }) => {
   const formatDate = (dateString?: string) =>
@@ -389,8 +385,11 @@ const KanbanView = ({
         <div
           key={area.id}
           className="flex flex-col gap-4 p-2 bg-gray-100/50 dark:bg-gray-900/50 rounded-lg"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
+          onDragOver={(e: React.DragEvent<HTMLDivElement>) =>
+            e.preventDefault()
+          } // Adicionado tipo
+          onDrop={(e: React.DragEvent<HTMLDivElement>) => {
+            // Adicionado tipo
             onTaskDrop(e.dataTransfer.getData("taskId"), area.color);
           }}
         >
@@ -407,7 +406,9 @@ const KanbanView = ({
                   className="p-3 cursor-pointer group"
                   onClick={() => onTaskClick(task)}
                   draggable
-                  onDragStart={(e) => e.dataTransfer.setData("taskId", task.id)}
+                  onDragStart={(e: React.DragEvent<HTMLDivElement>) =>
+                    e.dataTransfer.setData("taskId", task.id)
+                  } // CORRIGIDO
                 >
                   <div className="flex items-start gap-3">
                     <Checkbox
@@ -469,7 +470,7 @@ const ListView = ({
   tasks: Task[];
   areas: Area[];
   onTaskClick: (t: Task) => void;
-  onUpdateTask: (t: Task) => void;
+  onUpdateTask: (t: Partial<Task>) => void; // MODIFICADO para Partial<Task>
   onDeleteTask: (id: string) => void;
   onTaskDrop: (taskId: string, newColor: string) => void;
 }) => (
@@ -477,8 +478,9 @@ const ListView = ({
     {areas.map((area) => (
       <div
         key={area.id}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
+        onDragOver={(e: React.DragEvent<HTMLDivElement>) => e.preventDefault()} // Adicionado tipo
+        onDrop={(e: React.DragEvent<HTMLDivElement>) => {
+          // Adicionado tipo
           const taskId = e.dataTransfer.getData("taskId");
           onTaskDrop(taskId, area.color);
         }}
@@ -495,7 +497,9 @@ const ListView = ({
                 key={task.id}
                 className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border rounded-lg cursor-grab"
                 draggable
-                onDragStart={(e) => e.dataTransfer.setData("taskId", task.id)}
+                onDragStart={(e: React.DragEvent<HTMLDivElement>) =>
+                  e.dataTransfer.setData("taskId", task.id)
+                } // CORRIGIDO
               >
                 <div
                   className="flex items-center gap-4 flex-1"
@@ -529,7 +533,8 @@ const ListView = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      // CORRIGIDO
                       e.stopPropagation();
                       onDeleteTask(task.id);
                     }}
@@ -562,10 +567,10 @@ const EisenhowerMatrixView = ({
   onPriorityDrop: (taskId: string, newPriority: Task["priority"]) => void;
 }) => {
   const quadrants = {
-    Urgente: tasks.filter((t) => t.priority === "Urgente"),
-    Alta: tasks.filter((t) => t.priority === "Alta"),
-    Média: tasks.filter((t) => t.priority === "Média"),
-    Baixa: tasks.filter((t) => t.priority === "Baixa"),
+    Urgente: tasks.filter((t) => t.priority === "Urgente" && !t.completed),
+    Alta: tasks.filter((t) => t.priority === "Alta" && !t.completed),
+    Média: tasks.filter((t) => t.priority === "Média" && !t.completed),
+    Baixa: tasks.filter((t) => t.priority === "Baixa" && !t.completed),
   };
   const Quadrant = ({
     title,
@@ -584,8 +589,10 @@ const EisenhowerMatrixView = ({
   }) => (
     <div
       className={`rounded-xl flex flex-col ${bgColor}`}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => onPriorityDrop(e.dataTransfer.getData("taskId"), priority)}
+      onDragOver={(e: React.DragEvent<HTMLDivElement>) => e.preventDefault()} // Adicionado tipo
+      onDrop={(e: React.DragEvent<HTMLDivElement>) =>
+        onPriorityDrop(e.dataTransfer.getData("taskId"), priority)
+      } // Adicionado tipo
     >
       <div className="p-4 border-b border-black/10 dark:border-white/10">
         <h3 className="font-bold text-gray-900 dark:text-gray-100">{title}</h3>
@@ -598,7 +605,9 @@ const EisenhowerMatrixView = ({
             onClick={() => onTaskClick(t)}
             className="p-2.5 bg-white/80 dark:bg-gray-950/80 rounded-lg cursor-pointer text-sm font-medium"
             draggable
-            onDragStart={(e) => e.dataTransfer.setData("taskId", t.id)}
+            onDragStart={(e: React.DragEvent<HTMLDivElement>) =>
+              e.dataTransfer.setData("taskId", t.id)
+            } // CORRIGIDO
           >
             {t.name}
           </div>
@@ -666,7 +675,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
 
   useEffect(() => {
-    if (!user && !loading) {
+    if (!loading && !user) {
       router.push("/sign-in");
     }
     if (user) {
@@ -696,6 +705,7 @@ export default function TasksPage() {
         priority: "Média",
         color: areas[0]?.color || "bg-gray-500",
         subtasks: [],
+        completed: false,
       }
     );
     setIsModalOpen(true);
@@ -710,7 +720,7 @@ export default function TasksPage() {
       await addDoc(collection(db, "users", user.uid, "tasks"), {
         ...dataToSave,
         createdAt: new Date(),
-        completed: false,
+        completed: false, // Garantir que novas tarefas não sejam completas
       });
     }
   };

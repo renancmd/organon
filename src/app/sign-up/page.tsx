@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-// --- Componentes Mock ---
+// --- Componentes Mock (Com Tipagem Refinada) ---
 const Card = ({
   children,
   className = "",
@@ -38,46 +38,33 @@ const CardContent = ({
   children: React.ReactNode;
   className?: string;
 }) => <div className={`p-6 ${className}`}>{children}</div>;
-const Button = ({
-  children,
-  className = "",
-  ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  [key: string]: any;
-}) => (
+
+const Button = (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button
-    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors w-full h-10 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900 disabled:opacity-50 ${className}`}
+    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors w-full h-10 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900 disabled:opacity-50 ${
+      props.className || ""
+    }`}
     {...props}
   >
-    {children}
+    {props.children}
   </button>
 );
-const Input = ({
-  className = "",
-  ...props
-}: {
-  className?: string;
-  [key: string]: any;
-}) => (
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+      props.className || ""
+    }`}
   />
 );
-const Label = ({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  [key: string]: any;
-}) => (
+
+const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
     className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
     {...props}
   >
-    {children}
+    {props.children}
   </label>
 );
 
@@ -104,7 +91,9 @@ export default function RegisterPage() {
     setLoading(true);
     console.log("[RegisterPage] - Formulário enviado. Tentando registrar...");
     try {
-      await signUp(name, email, password);
+      // O 'signUp' no seu AuthContext provavelmente precisa ser adaptado para aceitar 'name'
+      // Assumindo que seu método signUp foi atualizado para: signUp(email, password, name)
+      await signUp(email, password, name);
       console.log("[RegisterPage] - signUp bem-sucedido! Redirecionando...");
       router.push("/");
     } catch (err: any) {
@@ -153,7 +142,9 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="Seu nome"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setName(e.target.value)
+                  } // CORRIGIDO
                   required
                 />
               </div>
@@ -164,7 +155,9 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEmail(e.target.value)
+                  } // CORRIGIDO
                   required
                 />
               </div>
@@ -174,7 +167,9 @@ export default function RegisterPage() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setPassword(e.target.value)
+                  } // CORRIGIDO
                   required
                 />
               </div>
@@ -184,7 +179,9 @@ export default function RegisterPage() {
                   id="confirm-password"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setConfirmPassword(e.target.value)
+                  } // CORRIGIDO
                   required
                 />
               </div>
@@ -197,7 +194,7 @@ export default function RegisterPage() {
           <div className="p-6 pt-0 text-center text-sm text-gray-600 dark:text-gray-400">
             Já tem uma conta?{" "}
             <a
-              href="/login"
+              href="/sign-in"
               className="font-medium text-blue-600 hover:underline dark:text-blue-500"
             >
               Entre

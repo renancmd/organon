@@ -9,6 +9,7 @@ import {
   Repeat,
   GanttChart,
   CircleUserRound,
+  Bell
 } from "lucide-react";
 
 function Sidebar() {
@@ -65,6 +66,38 @@ function Sidebar() {
   );
 }
 
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "default" | "ghost" | "outline";
+  size?: "default" | "icon";
+};
+
+const Button = ({
+  children,
+  className = "",
+  variant = "default",
+  size = "default",
+  ...props
+}: ButtonProps) => {
+  const baseClasses =
+    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
+  const variantClasses = {
+    default:
+      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
+    ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
+    outline:
+      "border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
+  };
+  const sizeClasses = { default: "h-10 py-2 px-4", icon: "h-10 w-10" };
+  return (
+    <button
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
 export default function HabitsLayout({
   children,
 }: {
@@ -77,7 +110,15 @@ export default function HabitsLayout({
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm px-6">
           <h1 className="text-xl font-semibold">Hábitos</h1>
 
-          <div></div>
+          <div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative rounded-full"
+            >
+              <Bell className="h-5 w-5" />
+            </Button>
+          </div>
         </header>
         {children}
       </div>

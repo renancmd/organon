@@ -350,7 +350,7 @@ function Sidebar() {
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
           href="/"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900"
+          className="group flex h-8 w-8 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900"
           title="Organon"
         >
           <span className="text-xl">O</span>
@@ -713,7 +713,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.push("/sign-in");
       return;
     }
     if (user) {
@@ -821,11 +821,6 @@ export default function HomePage() {
             <Button variant="ghost" size="icon">
               <Bell />
             </Button>
-            <Link href="/perfil">
-              <Button variant="ghost" size="icon">
-                <CircleUserRound />
-              </Button>
-            </Link>
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8">

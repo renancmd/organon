@@ -56,7 +56,6 @@ function Sidebar() {
           <GanttChart className="h-5 w-5" />
         </Link>
       </nav>
-      {/* O código original não tinha o link de Perfil na sidebar, adicionei para consistência */}
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
           href="/perfil"
@@ -123,9 +122,6 @@ export default function AgendaLayout({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
-            </Button>
-            <Button variant="ghost" size="icon" className="rounded-full ml-2">
-              <CircleUserRound className="h-6 w-6" />
             </Button>
           </div>
         </header>

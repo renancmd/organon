@@ -109,9 +109,6 @@ export default function DailyJournalLayout({
             >
               <Bell className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full ml-2">
-              <CircleUserRound className="h-6 w-6" />
-            </Button>
           </div>
         </header>
         {children}

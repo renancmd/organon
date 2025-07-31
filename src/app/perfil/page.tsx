@@ -293,8 +293,9 @@ export default function ProfilePage() {
                 id="email"
                 type="email"
                 value={profile?.email || ""}
-                readOnly
-                className="bg-gray-100 dark:bg-gray-800"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setProfile((p) => (p ? { ...p, email: e.target.value } : null))
+                }
               />
             </div>
           </CardContent>

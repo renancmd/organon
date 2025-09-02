@@ -26,10 +26,9 @@ const navItems = [
   { href: "/daily-journal", icon: GanttChart, label: "Diário" },
 ];
 
-// --- COMPONENTE SIDEBAR (Desktop com link ativo dinâmico) ---
+// --- COMPONENTE SIDEBAR ---
 function Sidebar() {
   const pathname = usePathname();
-
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r bg-white dark:bg-gray-950 dark:border-gray-800 md:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
@@ -75,12 +74,11 @@ function Sidebar() {
   );
 }
 
-// --- COMPONENTE BOTÃO (Versão aprimorada) ---
+// --- COMPONENTE BOTÃO ---
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "icon";
 };
-
 const Button = ({
   children,
   className = "",
@@ -108,8 +106,8 @@ const Button = ({
   );
 };
 
-// --- COMPONENTE LAYOUT PRINCIPAL DO DIÁRIO ---
-export default function DailyJournalLayout({
+// --- COMPONENTE LAYOUT PRINCIPAL ---
+export default function ProjectsLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -120,15 +118,12 @@ export default function DailyJournalLayout({
   return (
     <div className="min-h-screen w-full flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <Sidebar />
-
-      {/* --- MENU MOBILE --- */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
-
       <aside
         className={`fixed top-0 left-0 z-50 h-full w-72 transform bg-white p-6 shadow-xl transition-transform duration-300 ease-in-out dark:bg-gray-950 md:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -181,7 +176,6 @@ export default function DailyJournalLayout({
         </div>
       </aside>
 
-      {/* --- CONTEÚDO PRINCIPAL DA PÁGINA --- */}
       <div className="flex flex-col flex-1 md:ml-20">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -193,9 +187,8 @@ export default function DailyJournalLayout({
             >
               <Menu className="h-6 w-6" />
             </Button>
-            <h1 className="text-xl font-semibold">Diário (Linha do Tempo)</h1>
+            <h1 className="text-xl font-semibold">Projetos</h1>
           </div>
-
           <div className="flex items-center">
             <Button
               variant="ghost"

@@ -27,7 +27,8 @@ import {
   X,
   Paperclip,
   Trash2,
-  Menu, // Adicionado
+  Menu,
+  FolderKanban, // Adicionado
 } from "lucide-react";
 
 // --- ESTRUTURAS DE DADOS ---
@@ -75,6 +76,7 @@ type JournalEntry = {
 // --- DADOS DE NAVEGAÇÃO CENTRALIZADOS ---
 const navItems = [
   { href: "/", icon: Home, label: "Início" },
+  { href: "/projects", icon: FolderKanban, label: "Projetos" },
   { href: "/tasks", icon: ListChecks, label: "Tarefas" },
   { href: "/schedule", icon: CalendarDays, label: "Agenda" },
   { href: "/habits", icon: Repeat, label: "Hábitos" },

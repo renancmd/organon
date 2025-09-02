@@ -1,29 +1,26 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
 import {
   collection,
   onSnapshot,
   doc,
   addDoc,
   updateDoc,
-  deleteDoc,
   serverTimestamp,
-} from 'firebase/firestore';
+  Timestamp, // Import Timestamp for date fields
+} from "firebase/firestore";
 import {
   ChevronDown,
   ChevronRight,
   Plus,
-  Check,
   History,
   ArrowLeft,
-  Edit,
   Trash2,
-  Paperclip,
-} from 'lucide-react';
+} from "lucide-react";
 
 // --- ESTRUTURAS DE DADOS ---
 type SubCheckpoint = { id: string; title: string; done: boolean };
@@ -40,21 +37,34 @@ type Project = {
   name: string;
   description: string;
   fullDescription: string;
-  createdAt: any;
+  createdAt: Timestamp; // Correctly typed as Timestamp
   objectives: Objective[];
 };
 type HistoryLog = { id: string; text: string; timestamp: string };
 
+// Tipos para manipulação de itens
+type ItemType =
+  | "project"
+  | "objective"
+  | "goal"
+  | "checkpoint"
+  | "subcheckpoint";
+
+type ItemIds = {
+  projectId?: string;
+  objectiveId?: string;
+  goalId?: string;
+  checkpointId?: string;
+  subCheckpointId?: string;
+};
+
 // --- COMPONENTES UI ---
-const Card = ({
-  children,
-  className = '',
-  ...props
-}: {
+type CardProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactNode;
   className?: string;
-  [key: string]: any;
-}) => (
+};
+
+const Card = ({ children, className = "", ...props }: CardProps) => (
   <div
     {...props}
     className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm flex flex-col ${className}`}
@@ -63,29 +73,42 @@ const Card = ({
   </div>
 );
 
-const Button = ({
-  children,
-  className = '',
-  ...props
-}: {
+// Tipos e constantes para o componente Button
+type ButtonVariant = "default" | "ghost" | "outline";
+type ButtonSize = "default" | "icon";
+
+const buttonVariants: Record<ButtonVariant, string> = {
+  default:
+    "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
+  ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
+  outline: "border border-gray-200 dark:border-gray-700",
+};
+
+const buttonSizes: Record<ButtonSize, string> = {
+  default: "h-10 px-4 py-2",
+  icon: "h-9 w-9",
+};
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children: React.ReactNode;
   className?: string;
-  [key: string]: any;
-}) => {
-  const base: any =
-    'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors disabled:opacity-50';
-  const variants: any = {
-    default:
-      'bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900',
-    ghost: 'hover:bg-gray-100 dark:hover:bg-gray-800',
-    outline: 'border border-gray-200 dark:border-gray-700',
-  };
-  const sizes: any = { default: 'h-10 px-4 py-2', icon: 'h-9 w-9' };
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+};
+
+const Button = ({
+  children,
+  className = "",
+  variant = "default",
+  size = "default",
+  ...props
+}: ButtonProps) => {
+  const base: string =
+    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors disabled:opacity-50";
+
   return (
     <button
-      className={`${base} ${variants[props.variant || 'default']} ${
-        sizes[props.size || 'default']
-      } ${className}`}
+      className={`${base} ${buttonVariants[variant]} ${buttonSizes[size]} ${className}`}
       {...props}
     >
       {children}
@@ -100,14 +123,11 @@ const Checkbox = ({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) => (
-  <div
-    className="flex items-center"
-    onClick={e => e.stopPropagation()}
-  >
+  <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
     <input
       type="checkbox"
       checked={checked}
-      onChange={e => onChange(e.target.checked)}
+      onChange={(e) => onChange(e.target.checked)}
       className="h-4 w-4 shrink-0 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500"
     />
   </div>
@@ -126,29 +146,18 @@ const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
     className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
-      props.className || ''
+      props.className || ""
     }`}
   />
 );
 
-const Textarea = (
-  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>
-) => (
+const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
     className={`flex min-h-[80px] w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
-      props.className || ''
+      props.className || ""
     }`}
   />
-);
-
-const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
-  <label
-    className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
-    {...props}
-  >
-    {props.children}
-  </label>
 );
 
 // --- CÁLCULOS DE PROGRESSO ---
@@ -162,14 +171,15 @@ const calculateCheckpointsProgress = (checkpoints: Checkpoint[]): number => {
     (s, cp) =>
       s +
       (cp.done ? 1 : 0) +
-      (cp.subCheckpoints?.filter(sc => sc.done).length || 0),
+      (cp.subCheckpoints?.filter((sc) => sc.done).length || 0),
     0
   );
   return (completed / total) * 100;
 };
 
 const calculateProjectProgress = (project: Project): number => {
-  const allGoals = project.objectives.flatMap(obj => obj.goals);
+  if (!project.objectives) return 0;
+  const allGoals = project.objectives.flatMap((obj) => obj.goals);
   if (allGoals.length === 0) return 0;
   const progressSum = allGoals.reduce(
     (sum, goal) => sum + calculateCheckpointsProgress(goal.checkpoints),
@@ -186,7 +196,7 @@ const HistorySidebar = ({ logs }: { logs: HistoryLog[] }) => (
       <History className="w-5 h-5" /> Histórico
     </h3>
     <div className="space-y-4 overflow-y-auto">
-      {logs.map(log => (
+      {logs.map((log) => (
         <div key={log.id} className="text-sm">
           <p>{log.text}</p>
           <p className="text-xs text-gray-500">{log.timestamp}</p>
@@ -199,7 +209,7 @@ const HistorySidebar = ({ logs }: { logs: HistoryLog[] }) => (
 const EditableTitle = ({
   title,
   onSave,
-  className = '',
+  className = "",
 }: {
   title: string;
   onSave: (newTitle: string) => void;
@@ -211,14 +221,14 @@ const EditableTitle = ({
     return (
       <Input
         value={text}
-        onChange={e => setText(e.target.value)}
+        onChange={(e) => setText(e.target.value)}
         onBlur={() => {
           onSave(text);
           setIsEditing(false);
         }}
         autoFocus
-        onKeyDown={e => {
-          if (e.key === 'Enter') {
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
             onSave(text);
             setIsEditing(false);
           }
@@ -240,7 +250,7 @@ const EditableTitle = ({
 const EditableTextarea = ({
   text,
   onSave,
-  className = '',
+  className = "",
 }: {
   text: string;
   onSave: (newText: string) => void;
@@ -252,7 +262,7 @@ const EditableTextarea = ({
     return (
       <Textarea
         value={currentText}
-        onChange={e => setCurrentText(e.target.value)}
+        onChange={(e) => setCurrentText(e.target.value)}
         onBlur={() => {
           onSave(currentText);
           setIsEditing(false);
@@ -267,7 +277,7 @@ const EditableTextarea = ({
       onClick={() => setIsEditing(true)}
       className={`mt-4 text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded whitespace-pre-wrap ${className}`}
     >
-      {text || 'Adicione uma descrição completa.'}
+      {text || "Adicione uma descrição completa."}
     </p>
   );
 };
@@ -283,19 +293,13 @@ const ProjectDetailView = ({
   project: Project;
   onBack: () => void;
   onUpdate: (p: Project) => void;
-  onAdd: (
-    type: 'objective' | 'goal' | 'checkpoint' | 'subcheckpoint',
-    parentIds: any
-  ) => void;
-  onDelete: (
-    type: 'objective' | 'goal' | 'checkpoint' | 'subcheckpoint',
-    ids: any
-  ) => void;
+  onAdd: (type: ItemType, parentIds: ItemIds) => void;
+  onDelete: (type: ItemType, ids: ItemIds) => void;
   logs: HistoryLog[];
 }) => {
   const [expanded, setExpanded] = useState<{ [key: string]: boolean }>({});
   const toggle = (id: string) =>
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <div className="flex flex-1 h-[calc(100vh-4rem)]">
@@ -307,35 +311,38 @@ const ProjectDetailView = ({
           <div>
             <EditableTitle
               title={project.name}
-              onSave={newName => onUpdate({ ...project, name: newName })}
+              onSave={(newName) => onUpdate({ ...project, name: newName })}
               className="text-3xl font-bold"
             />
-            {/* <p className="text-sm text-gray-500 mt-1">
-              Criado em: {project.createdAt?.toDate().toLocaleDateString('pt-BR')}
-            </p> */}
+            <p className="text-sm text-gray-500 mt-1">
+              Criado em:{" "}
+              {project.createdAt?.toDate().toLocaleDateString("pt-BR")}
+            </p>
             <EditableTextarea
               text={project.fullDescription}
-              onSave={newDescription =>
+              onSave={(newDescription) =>
                 onUpdate({ ...project, fullDescription: newDescription })
               }
             />
           </div>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Objetivos</h2>
-            <Button onClick={() => onAdd('objective', { projectId: project.id })}>
+            <Button
+              onClick={() => onAdd("objective", { projectId: project.id })}
+            >
               <Plus className="w-4 h-4 mr-2" /> Objetivo
             </Button>
           </div>
           <div className="space-y-4">
-            {project.objectives.map(obj => (
+            {project.objectives.map((obj) => (
               <Card key={obj.id}>
                 <div className="p-4 border-b dark:border-gray-800 flex justify-between items-center group">
                   <EditableTitle
                     title={obj.title}
-                    onSave={newTitle =>
+                    onSave={(newTitle) =>
                       onUpdate({
                         ...project,
-                        objectives: project.objectives.map(o =>
+                        objectives: project.objectives.map((o) =>
                           o.id === obj.id ? { ...o, title: newTitle } : o
                         ),
                       })
@@ -346,7 +353,7 @@ const ProjectDetailView = ({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => onAdd('goal', { objectiveId: obj.id })}
+                      onClick={() => onAdd("goal", { objectiveId: obj.id })}
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
@@ -354,15 +361,19 @@ const ProjectDetailView = ({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => onDelete('objective', { objectiveId: obj.id })}
+                      onClick={() =>
+                        onDelete("objective", { objectiveId: obj.id })
+                      }
                     >
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
                   </div>
                 </div>
                 <div className="p-4 space-y-3">
-                  {obj.goals.map(goal => {
-                    const goalProgress = calculateCheckpointsProgress(goal.checkpoints);
+                  {obj.goals.map((goal) => {
+                    const goalProgress = calculateCheckpointsProgress(
+                      goal.checkpoints
+                    );
                     return (
                       <div key={goal.id} className="p-2 rounded-lg group">
                         <div className="flex items-center justify-between">
@@ -377,14 +388,14 @@ const ProjectDetailView = ({
                             )}
                             <EditableTitle
                               title={goal.title}
-                              onSave={newTitle =>
+                              onSave={(newTitle) =>
                                 onUpdate({
                                   ...project,
-                                  objectives: project.objectives.map(o =>
+                                  objectives: project.objectives.map((o) =>
                                     o.id === obj.id
                                       ? {
                                           ...o,
-                                          goals: o.goals.map(g =>
+                                          goals: o.goals.map((g) =>
                                             g.id === goal.id
                                               ? { ...g, title: newTitle }
                                               : g
@@ -402,7 +413,7 @@ const ProjectDetailView = ({
                               size="icon"
                               className="h-8 w-8"
                               onClick={() =>
-                                onAdd('checkpoint', {
+                                onAdd("checkpoint", {
                                   objectiveId: obj.id,
                                   goalId: goal.id,
                                 })
@@ -415,7 +426,7 @@ const ProjectDetailView = ({
                               size="icon"
                               className="h-8 w-8"
                               onClick={() =>
-                                onDelete('goal', {
+                                onDelete("goal", {
                                   objectiveId: obj.id,
                                   goalId: goal.id,
                                 })
@@ -428,62 +439,75 @@ const ProjectDetailView = ({
                         {expanded[goal.id] && (
                           <div className="pl-6 mt-2 space-y-3">
                             <ProgressBar progress={goalProgress} />
-                            {goal.checkpoints.map(cp => (
+                            {goal.checkpoints.map((cp) => (
                               <div key={cp.id} className="group/item">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <Checkbox
                                       checked={cp.done}
-                                      onChange={c =>
+                                      onChange={(c) =>
                                         onUpdate({
                                           ...project,
-                                          objectives: project.objectives.map(o =>
-                                            o.id === obj.id
-                                              ? {
-                                                  ...o,
-                                                  goals: o.goals.map(g =>
-                                                    g.id === goal.id
-                                                      ? {
-                                                          ...g,
-                                                          checkpoints: g.checkpoints.map(
-                                                            cpt =>
-                                                              cpt.id === cp.id
-                                                                ? { ...cpt, done: c }
-                                                                : cpt
-                                                          ),
-                                                        }
-                                                      : g
-                                                  ),
-                                                }
-                                              : o
+                                          objectives: project.objectives.map(
+                                            (o) =>
+                                              o.id === obj.id
+                                                ? {
+                                                    ...o,
+                                                    goals: o.goals.map((g) =>
+                                                      g.id === goal.id
+                                                        ? {
+                                                            ...g,
+                                                            checkpoints:
+                                                              g.checkpoints.map(
+                                                                (cpt) =>
+                                                                  cpt.id ===
+                                                                  cp.id
+                                                                    ? {
+                                                                        ...cpt,
+                                                                        done: c,
+                                                                      }
+                                                                    : cpt
+                                                              ),
+                                                          }
+                                                        : g
+                                                    ),
+                                                  }
+                                                : o
                                           ),
                                         })
                                       }
                                     />
                                     <EditableTitle
                                       title={cp.title}
-                                      onSave={newTitle =>
+                                      onSave={(newTitle) =>
                                         onUpdate({
                                           ...project,
-                                          objectives: project.objectives.map(o =>
-                                            o.id === obj.id
-                                              ? {
-                                                  ...o,
-                                                  goals: o.goals.map(g =>
-                                                    g.id === goal.id
-                                                      ? {
-                                                          ...g,
-                                                          checkpoints: g.checkpoints.map(
-                                                            cpt =>
-                                                              cpt.id === cp.id
-                                                                ? { ...cpt, title: newTitle }
-                                                                : cpt
-                                                          ),
-                                                        }
-                                                      : g
-                                                  ),
-                                                }
-                                              : o
+                                          objectives: project.objectives.map(
+                                            (o) =>
+                                              o.id === obj.id
+                                                ? {
+                                                    ...o,
+                                                    goals: o.goals.map((g) =>
+                                                      g.id === goal.id
+                                                        ? {
+                                                            ...g,
+                                                            checkpoints:
+                                                              g.checkpoints.map(
+                                                                (cpt) =>
+                                                                  cpt.id ===
+                                                                  cp.id
+                                                                    ? {
+                                                                        ...cpt,
+                                                                        title:
+                                                                          newTitle,
+                                                                      }
+                                                                    : cpt
+                                                              ),
+                                                          }
+                                                        : g
+                                                    ),
+                                                  }
+                                                : o
                                           ),
                                         })
                                       }
@@ -495,7 +519,7 @@ const ProjectDetailView = ({
                                       size="icon"
                                       className="h-7 w-7"
                                       onClick={() =>
-                                        onAdd('subcheckpoint', {
+                                        onAdd("subcheckpoint", {
                                           objectiveId: obj.id,
                                           goalId: goal.id,
                                           checkpointId: cp.id,
@@ -509,7 +533,7 @@ const ProjectDetailView = ({
                                       size="icon"
                                       className="h-7 w-7"
                                       onClick={() =>
-                                        onDelete('checkpoint', {
+                                        onDelete("checkpoint", {
                                           objectiveId: obj.id,
                                           goalId: goal.id,
                                           checkpointId: cp.id,
@@ -521,84 +545,100 @@ const ProjectDetailView = ({
                                   </div>
                                 </div>
                                 <div className="pl-6 space-y-1 mt-1">
-                                  {cp.subCheckpoints.map(sub => (
+                                  {cp.subCheckpoints.map((sub) => (
                                     <div
                                       key={sub.id}
                                       className="flex items-center gap-2 group/subitem"
                                     >
                                       <Checkbox
                                         checked={sub.done}
-                                        onChange={c =>
+                                        onChange={(c) =>
                                           onUpdate({
                                             ...project,
-                                            objectives: project.objectives.map(o =>
-                                              o.id === obj.id
-                                                ? {
-                                                    ...o,
-                                                    goals: o.goals.map(g =>
-                                                      g.id === goal.id
-                                                        ? {
-                                                            ...g,
-                                                            checkpoints: g.checkpoints.map(
-                                                              cpt =>
-                                                                cpt.id === cp.id
-                                                                  ? {
-                                                                      ...cpt,
-                                                                      subCheckpoints:
-                                                                        cpt.subCheckpoints.map(
-                                                                          s =>
-                                                                            s.id === sub.id
-                                                                              ? { ...s, done: c }
-                                                                              : s
-                                                                        ),
-                                                                    }
-                                                                  : cpt
-                                                            ),
-                                                          }
-                                                        : g
-                                                    ),
-                                                  }
-                                                : o
+                                            objectives: project.objectives.map(
+                                              (o) =>
+                                                o.id === obj.id
+                                                  ? {
+                                                      ...o,
+                                                      goals: o.goals.map((g) =>
+                                                        g.id === goal.id
+                                                          ? {
+                                                              ...g,
+                                                              checkpoints:
+                                                                g.checkpoints.map(
+                                                                  (cpt) =>
+                                                                    cpt.id ===
+                                                                    cp.id
+                                                                      ? {
+                                                                          ...cpt,
+                                                                          subCheckpoints:
+                                                                            cpt.subCheckpoints.map(
+                                                                              (
+                                                                                s
+                                                                              ) =>
+                                                                                s.id ===
+                                                                                sub.id
+                                                                                  ? {
+                                                                                      ...s,
+                                                                                      done: c,
+                                                                                    }
+                                                                                  : s
+                                                                            ),
+                                                                        }
+                                                                      : cpt
+                                                                ),
+                                                            }
+                                                          : g
+                                                      ),
+                                                    }
+                                                  : o
                                             ),
                                           })
                                         }
                                       />
                                       <EditableTitle
                                         title={sub.title}
-                                        onSave={newTitle =>
+                                        onSave={(newTitle) =>
                                           onUpdate({
                                             ...project,
-                                            objectives: project.objectives.map(o =>
-                                              o.id === obj.id
-                                                ? {
-                                                    ...o,
-                                                    goals: o.goals.map(g =>
-                                                      g.id === goal.id
-                                                        ? {
-                                                            ...g,
-                                                            checkpoints: g.checkpoints.map(
-                                                              cpt =>
-                                                                cpt.id === cp.id
-                                                                  ? {
-                                                                      ...cpt,
-                                                                      subCheckpoints:
-                                                                        cpt.subCheckpoints.map(
-                                                                          s =>
-                                                                            s.id === sub.id
-                                                                              ? {
-                                                                                  ...s,
-                                                                                  title: newTitle,
-                                                                                }
-                                                                              : s
-                                                                        ),
-                                                                    }
-                                                                  : cpt
-                                                            ),
-                                                          }
-                                                        : g
-                                                    ),
-                                                  }
-                                                : o
+                                            objectives: project.objectives.map(
+                                              (o) =>
+                                                o.id === obj.id
+                                                  ? {
+                                                      ...o,
+                                                      goals: o.goals.map((g) =>
+                                                        g.id === goal.id
+                                                          ? {
+                                                              ...g,
+                                                              checkpoints:
+                                                                g.checkpoints.map(
+                                                                  (cpt) =>
+                                                                    cpt.id ===
+                                                                    cp.id
+                                                                      ? {
+                                                                          ...cpt,
+                                                                          subCheckpoints:
+                                                                            cpt.subCheckpoints.map(
+                                                                              (
+                                                                                s
+                                                                              ) =>
+                                                                                s.id ===
+                                                                                sub.id
+                                                                                  ? {
+                                                                                      ...s,
+                                                                                      title:
+                                                                                        newTitle,
+                                                                                    }
+                                                                                  : s
+                                                                            ),
+                                                                        }
+                                                                      : cpt
+                                                                ),
+                                                            }
+                                                          : g
+                                                      ),
+                                                    }
+                                                  : o
                                             ),
                                           })
                                         }
@@ -609,7 +649,7 @@ const ProjectDetailView = ({
                                           size="icon"
                                           className="h-6 w-6"
                                           onClick={() =>
-                                            onDelete('subcheckpoint', {
+                                            onDelete("subcheckpoint", {
                                               objectiveId: obj.id,
                                               goalId: goal.id,
                                               checkpointId: cp.id,
@@ -658,7 +698,7 @@ const ProjectsListView = ({
       </Button>
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {projects.map(p => {
+      {projects.map((p) => {
         const progress = calculateProjectProgress(p);
         return (
           <Card
@@ -696,13 +736,13 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     if (!user && !loading) {
-      router.push('/sign-in');
+      router.push("/sign-in");
     }
     if (user) {
-      const projectsRef = collection(db, 'users', user.uid, 'projects');
-      const unsubscribe = onSnapshot(projectsRef, snapshot => {
+      const projectsRef = collection(db, "users", user.uid, "projects");
+      const unsubscribe = onSnapshot(projectsRef, (snapshot) => {
         const projectsData = snapshot.docs.map(
-          doc => ({ id: doc.id, ...doc.data() } as Project)
+          (doc) => ({ id: doc.id, ...doc.data() } as Project)
         );
         setProjects(projectsData);
       });
@@ -714,27 +754,27 @@ export default function ProjectsPage() {
     const newLog: HistoryLog = {
       id: `log-${Date.now()}`,
       text,
-      timestamp: new Date().toLocaleString('pt-BR'),
+      timestamp: new Date().toLocaleString("pt-BR"),
     };
-    setHistory(prev => [newLog, ...prev]);
+    setHistory((prev) => [newLog, ...prev]);
   };
 
   const handleUpdateProject = async (updatedProject: Project) => {
     if (!user) return;
     const { id, ...dataToSave } = updatedProject;
-    await updateDoc(doc(db, 'users', user.uid, 'projects', id), dataToSave);
+    await updateDoc(doc(db, "users", user.uid, "projects", id), dataToSave);
     setSelectedProject(updatedProject);
   };
 
-  const handleAdd = async (type: string, parentIds?: any) => {
+  const handleAdd = async (type: ItemType, parentIds?: ItemIds) => {
     const newName = prompt(`Digite o nome para o novo ${type}:`);
     if (!newName || !user) return;
 
-    if (type === 'project') {
-      await addDoc(collection(db, 'users', user.uid, 'projects'), {
+    if (type === "project") {
+      await addDoc(collection(db, "users", user.uid, "projects"), {
         name: newName,
-        description: 'Adicione uma breve descrição.',
-        fullDescription: 'Adicione uma descrição completa.',
+        description: "Adicione uma breve descrição.",
+        fullDescription: "Adicione uma descrição completa.",
         createdAt: serverTimestamp(),
         objectives: [],
       });
@@ -742,31 +782,31 @@ export default function ProjectsPage() {
     }
 
     const projectToUpdate = JSON.parse(
-      JSON.stringify(projects.find(p => p.id === selectedProject?.id))
+      JSON.stringify(projects.find((p) => p.id === selectedProject?.id))
     );
     if (!projectToUpdate) return;
 
     switch (type) {
-      case 'objective':
+      case "objective":
         projectToUpdate.objectives.push({
           id: `obj-${Date.now()}`,
           title: newName,
           goals: [],
         });
         break;
-      case 'goal':
+      case "goal":
         projectToUpdate.objectives
-          .find((o: Objective) => o.id === parentIds.objectiveId)
+          .find((o: Objective) => o.id === parentIds!.objectiveId)
           ?.goals.push({
             id: `goal-${Date.now()}`,
             title: newName,
             checkpoints: [],
           });
         break;
-      case 'checkpoint':
+      case "checkpoint":
         projectToUpdate.objectives
-          .find((o: Objective) => o.id === parentIds.objectiveId)
-          ?.goals.find((g: Goal) => g.id === parentIds.goalId)
+          .find((o: Objective) => o.id === parentIds!.objectiveId)
+          ?.goals.find((g: Goal) => g.id === parentIds!.goalId)
           ?.checkpoints.push({
             id: `cp-${Date.now()}`,
             title: newName,
@@ -774,12 +814,12 @@ export default function ProjectsPage() {
             subCheckpoints: [],
           });
         break;
-      case 'subcheckpoint':
+      case "subcheckpoint":
         projectToUpdate.objectives
-          .find((o: Objective) => o.id === parentIds.objectiveId)
-          ?.goals.find((g: Goal) => g.id === parentIds.goalId)
+          .find((o: Objective) => o.id === parentIds!.objectiveId)
+          ?.goals.find((g: Goal) => g.id === parentIds!.goalId)
           ?.checkpoints.find(
-            (c: Checkpoint) => c.id === parentIds.checkpointId
+            (c: Checkpoint) => c.id === parentIds!.checkpointId
           )
           ?.subCheckpoints.push({
             id: `sub-${Date.now()}`,
@@ -791,29 +831,31 @@ export default function ProjectsPage() {
     await handleUpdateProject(projectToUpdate);
   };
 
-  const handleDelete = async (type: string, ids: any) => {
+  const handleDelete = async (type: ItemType, ids: ItemIds) => {
     if (
-      !confirm('Tem certeza que deseja excluir? A ação não pode ser desfeita.') ||
+      !confirm(
+        "Tem certeza que deseja excluir? A ação não pode ser desfeita."
+      ) ||
       !user ||
       !selectedProject
     )
       return;
 
-    let projectToUpdate = JSON.parse(JSON.stringify(selectedProject));
+    const projectToUpdate = JSON.parse(JSON.stringify(selectedProject));
 
     switch (type) {
-      case 'objective':
+      case "objective":
         projectToUpdate.objectives = projectToUpdate.objectives.filter(
           (o: Objective) => o.id !== ids.objectiveId
         );
         break;
-      case 'goal':
+      case "goal":
         projectToUpdate.objectives.forEach((o: Objective) => {
           if (o.id === ids.objectiveId)
             o.goals = o.goals.filter((g: Goal) => g.id !== ids.goalId);
         });
         break;
-      case 'checkpoint':
+      case "checkpoint":
         projectToUpdate.objectives.forEach((o: Objective) => {
           if (o.id === ids.objectiveId)
             o.goals.forEach((g: Goal) => {
@@ -824,7 +866,7 @@ export default function ProjectsPage() {
             });
         });
         break;
-      case 'subcheckpoint':
+      case "subcheckpoint":
         projectToUpdate.objectives.forEach((o: Objective) => {
           if (o.id === ids.objectiveId)
             o.goals.forEach((g: Goal) => {
@@ -867,7 +909,7 @@ export default function ProjectsPage() {
     <ProjectsListView
       projects={projects}
       onSelect={setSelectedProject}
-      onAdd={() => handleAdd('project')}
+      onAdd={() => handleAdd("project")}
     />
   );
 }

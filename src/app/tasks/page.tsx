@@ -1,9 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
+
+// Simulação de hooks do Next.js para compatibilidade no ambiente
+const useRouter = () => ({
+  push: (href: string) => {
+    window.location.hash = href;
+  },
+});
+
+
 import {
   collection,
   onSnapshot,
@@ -40,7 +48,7 @@ type Task = {
   attachments?: Attachment[];
 };
 
-// --- Componentes UI ---
+// --- Componentes UI (Refatorados com CSS Vars) ---
 const Card = ({
   children,
   className = "",
@@ -48,7 +56,11 @@ const Card = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     {...props}
-    className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
+    className={`relative rounded-xl shadow-sm border ${className}`}
+    style={{
+        backgroundColor: "var(--card-bg)",
+        borderColor: "var(--card-border)"
+    }}
   >
     {children}
   </div>
@@ -78,13 +90,13 @@ const Checkbox = ({
         onChange?.(e.target.checked)
       }
       disabled={disabled}
-      className="h-4 w-4 shrink-0 rounded-sm border-gray-300"
+      className="h-4 w-4 shrink-0 rounded-sm"
+      style={{ borderColor: "var(--input-border)"}}
       {...props}
     />
   </div>
 );
 
-// Tipos para as props do botão
 type ButtonProps = {
   children: React.ReactNode;
   className?: string;
@@ -99,18 +111,20 @@ const Button = ({
   size = "default",
   ...props
 }: ButtonProps) => {
-  const base =
-    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
-  const variants = {
-    default:
-      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
-    ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
-    outline: "border border-gray-200 dark:border-gray-700",
-  };
+  const base = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors disabled:opacity-50";
   const sizes = { default: "h-10 px-4 py-2", icon: "h-10 w-10" };
+  
+  const style: React.CSSProperties =
+    variant === "default"
+      ? { backgroundColor: "var(--button-bg)", color: "var(--button-text)" }
+      : variant === "outline"
+      ? { borderColor: "var(--card-border)", backgroundColor: "transparent" }
+      : { backgroundColor: "transparent" };
+
   return (
     <button
-      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`${base} ${sizes[size]} ${className}`}
+      style={style}
       {...props}
     >
       {children}
@@ -124,7 +138,8 @@ const Input = ({
 }: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm ${className}`}
+    style={{ borderColor: "var(--input-border)" }}
   />
 );
 
@@ -134,7 +149,8 @@ const Textarea = ({
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className={`flex min-h-[80px] w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${className}`}
+    className={`flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm ${className}`}
+    style={{ borderColor: "var(--input-border)" }}
   />
 );
 
@@ -144,7 +160,7 @@ const Label = ({
 }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
     {...props}
-    className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
+    className="text-sm font-medium leading-none"
   >
     {children}
   </label>
@@ -156,13 +172,14 @@ const Select = ({
 }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
     {...props}
-    className="h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800"
+    className="h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+    style={{ borderColor: "var(--input-border)" }}
   >
     {children}
   </select>
 );
 
-// --- MODAL DE TAREFA COMPLETO ---
+// --- MODAL DE TAREFA (Refatorado com CSS Vars) ---
 function TaskModal({
   isOpen,
   onClose,
@@ -223,10 +240,11 @@ function TaskModal({
       onClick={onClose}
     >
       <div
-        className="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl"
+        className="relative z-50 w-full max-w-2xl rounded-2xl"
+        style={{ backgroundColor: "var(--card-bg)" }}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
-        <div className="p-6 border-b flex justify-between items-center">
+        <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: "var(--card-border)"}}>
           <h3 className="text-lg font-semibold">
             {isNewTask ? "Nova Tarefa" : "Editar Tarefa"}
           </h3>
@@ -318,7 +336,7 @@ function TaskModal({
                     }
                     className={`w-8 h-8 rounded-full ${a.color} ${
                       currentTask.color === a.color
-                        ? "ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-gray-900"
+                        ? "ring-2 ring-offset-2 ring-blue-500"
                         : ""
                     }`}
                     aria-label={`Selecionar área ${a.name}`}
@@ -371,7 +389,7 @@ function TaskModal({
             </Button>
           </div>
         </div>
-        <div className="p-4 flex justify-between items-center border-t">
+        <div className="p-4 flex justify-between items-center border-t" style={{ borderColor: "var(--card-border)"}}>
           <Button
             variant="ghost"
             size="icon"
@@ -399,7 +417,7 @@ const CompletedTasksDropdown = ({
 }) => {
   if (tasks.length === 0) return null;
   return (
-    <details className="mt-6 rounded-lg border dark:border-gray-800 group">
+    <details className="mt-6 rounded-lg border group" style={{ borderColor: "var(--card-border)"}}>
       <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
         <div className="flex items-center gap-2 font-semibold">
           <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -408,11 +426,11 @@ const CompletedTasksDropdown = ({
         </div>
         <ChevronDown className="transition-transform duration-200 group-open:rotate-180" />
       </summary>
-      <div className="border-t dark:border-gray-800 p-4 space-y-2">
+      <div className="border-t p-4 space-y-2" style={{ borderColor: "var(--card-border)"}}>
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400"
+            className="flex items-center gap-3 text-sm text-gray-500"
           >
             <Checkbox
               id={`c-${task.id}`}
@@ -420,7 +438,7 @@ const CompletedTasksDropdown = ({
               onChange={(c) => onUpdateTask({ id: task.id, completed: c })}
             />
             <span
-              className="line-through cursor-pointer hover:text-gray-800 dark:hover:text-gray-200"
+              className="line-through cursor-pointer hover:opacity-80"
               onClick={() => onTaskClick(task)}
             >
               {task.name}
@@ -458,7 +476,8 @@ const KanbanView = ({
       {areas.map((area) => (
         <div
           key={area.id}
-          className="flex flex-col gap-4 p-2 bg-gray-100/50 dark:bg-gray-900/50 rounded-lg"
+          className="flex flex-col gap-4 p-2 rounded-lg"
+          style={{ backgroundColor: "var(--background)"}}
           onDragOver={(e: React.DragEvent) => e.preventDefault()}
           onDrop={(e: React.DragEvent) => {
             e.preventDefault();
@@ -514,6 +533,7 @@ const KanbanView = ({
                         </span>
                       )}
                     </div>
+                    {/* Cores semânticas são mantidas */}
                     <div
                       className={`text-xs font-semibold px-2 py-1 rounded-full ${
                         task.priority === "Urgente" || task.priority === "Alta"
@@ -569,7 +589,8 @@ const ListView = ({
             .map((task) => (
               <div
                 key={task.id}
-                className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border rounded-lg cursor-grab"
+                className="flex items-center justify-between p-3 border rounded-lg cursor-grab"
+                style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)"}}
                 draggable
                 onDragStart={(e: React.DragEvent) =>
                   e.dataTransfer.setData("taskId", task.id)
@@ -603,7 +624,7 @@ const ListView = ({
                       )}
                     </p>
                   )}
-                  <span className="hidden sm:inline-block text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
+                  <span className="hidden sm:inline-block text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "var(--background)"}}>
                     {task.priority}
                   </span>
                   <Button
@@ -670,15 +691,16 @@ const EisenhowerMatrixView = ({
       }}
     >
       <div className="p-4 border-b border-black/10 dark:border-white/10">
-        <h3 className="font-bold text-gray-900 dark:text-gray-100">{title}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">{subtitle}</p>
+        <h3 className="font-bold">{title}</h3>
+        <p className="text-sm opacity-80">{subtitle}</p>
       </div>
       <div className="p-4 space-y-2 overflow-y-auto flex-1">
         {tasks.map((t) => (
           <div
             key={t.id}
             onClick={() => onTaskClick(t)}
-            className="p-2.5 bg-white/80 dark:bg-gray-950/80 rounded-lg cursor-pointer text-sm font-medium"
+            className="p-2.5 rounded-lg cursor-pointer text-sm font-medium"
+            style={{ backgroundColor: "rgba(var(--card-rgb), 0.8)"}}
             draggable
             onDragStart={(e: React.DragEvent) =>
               e.dataTransfer.setData("taskId", t.id)
@@ -818,13 +840,11 @@ export default function TasksPage() {
 
   const handleDeleteTask = async (taskId: string) => {
     if (!user || !taskId) return;
-    if (window.confirm("Tem certeza que deseja excluir esta tarefa?")) {
-      try {
-        await deleteDoc(doc(db, "users", user.uid, "tasks", taskId));
-        setIsModalOpen(false);
-      } catch (error) {
-        console.error("Erro ao excluir tarefa:", error);
-      }
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "tasks", taskId));
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao excluir tarefa:", error);
     }
   };
 
@@ -854,7 +874,7 @@ export default function TasksPage() {
   }
 
   return (
-    <main className="flex-1 p-4 md:p-8">
+    <main className="flex-1 p-4 md:p-8 transition-colors duration-300" style={{ backgroundColor: "var(--background)", color: "var(--foreground)"}}>
       <TaskModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -864,7 +884,7 @@ export default function TasksPage() {
         areas={areas}
       />
       <header className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-gray-900 p-1">
+        <div className="flex items-center gap-2 rounded-lg p-1" style={{ backgroundColor: "var(--card-bg)"}}>
           <Button
             variant={view === "kanban" ? "default" : "ghost"}
             onClick={() => setView("kanban")}
@@ -930,3 +950,4 @@ export default function TasksPage() {
     </main>
   );
 }
+

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation"; // Adicionado usePathname
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import {
@@ -28,7 +28,7 @@ import {
   Paperclip,
   Trash2,
   Menu,
-  FolderKanban, // Adicionado
+  FolderKanban,
 } from "lucide-react";
 
 // --- ESTRUTURAS DE DADOS ---
@@ -83,7 +83,7 @@ const navItems = [
   { href: "/daily-journal", icon: GanttChart, label: "Diário" },
 ];
 
-// --- COMPONENTES UI ---
+// --- COMPONENTES UI (Refatorados com Variáveis CSS) ---
 const Card = ({
   children,
   className = "",
@@ -92,17 +92,24 @@ const Card = ({
   className?: string;
 }) => (
   <div
-    className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm flex flex-col ${className}`}
+    className={`border rounded-xl shadow-sm flex flex-col ${className}`}
+    style={{
+      backgroundColor: "var(--card-bg)",
+      borderColor: "var(--card-border)",
+    }}
   >
     {children}
   </div>
 );
+
 const CardHeader = ({ children }: { children: React.ReactNode }) => (
   <div className="p-6">{children}</div>
 );
+
 const CardTitle = ({ children }: { children: React.ReactNode }) => (
   <h3 className="text-lg font-semibold">{children}</h3>
 );
+
 const CardContent = ({
   children,
   className = "",
@@ -110,6 +117,7 @@ const CardContent = ({
   children: React.ReactNode;
   className?: string;
 }) => <div className={`p-6 pt-0 flex-1 ${className}`}>{children}</div>;
+
 const CardFooter = ({ children }: { children: React.ReactNode }) => (
   <div className="flex items-center p-6 pt-0">{children}</div>
 );
@@ -119,6 +127,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: "default" | "icon";
 };
 
+// Componente Button adaptado do seu perfil/page.tsx, mantendo os sizes do page.tsx
 const Button = ({
   children,
   className = "",
@@ -126,19 +135,30 @@ const Button = ({
   size = "default",
   ...props
 }: ButtonProps) => {
-  const baseClasses =
+  const base =
     "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:opacity-50 disabled:pointer-events-none";
-  const variantClasses = {
-    default:
-      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
-    ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
-    outline:
-      "border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
+  const variants = {
+    default: "", // Estilo aplicado via style prop
+    ghost: "bg-transparent",
+    outline: "border",
   };
-  const sizeClasses = { default: "h-10 py-2 px-4", icon: "h-10 w-10" };
+  const sizes = {
+    default: "h-10 py-2 px-4", // Mantido do page.tsx original
+    icon: "h-10 w-10", // Mantido do page.tsx original
+  };
+
+  const style: React.CSSProperties = {};
+  if (variant === "default") {
+    style.backgroundColor = "var(--button-bg)";
+    style.color = "var(--button-text)";
+  } else if (variant === "outline") {
+    style.borderColor = "var(--card-border)";
+  }
+
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      style={style}
       {...props}
     >
       {children}
@@ -161,16 +181,22 @@ const Checkbox = ({
       type="checkbox"
       checked={!!checked}
       onChange={(e) => onChange?.(e.target.checked)}
-      className="h-4 w-4 shrink-0 rounded-sm border-gray-300"
+      className="h-4 w-4 shrink-0 rounded-sm border-gray-300" // Checkbox styling é complexo para vars, mantido simples.
     />
   </div>
 );
 
+// Textarea adaptada para usar variáveis
 const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     className={`flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm ${
       props.className || ""
     }`}
+    style={{
+      borderColor: "var(--input-border)",
+      backgroundColor: "var(--card-bg)",
+      color: "var(--foreground)",
+    }}
     {...props}
   />
 );
@@ -181,23 +207,34 @@ const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   </label>
 );
 
+// Input adaptado para usar variáveis
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+    className={`flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm ${
       props.className || ""
     }`}
+    style={{
+      borderColor: "var(--input-border)",
+      backgroundColor: "var(--card-bg)",
+      color: "var(--foreground)",
+    }}
   />
 );
 
 const Tabs = ({ children }: { children: React.ReactNode }) => (
   <div>{children}</div>
 );
+
 const TabsList = ({ children }: { children: React.ReactNode }) => (
-  <div className="inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 dark:bg-gray-800">
+  <div
+    className="inline-flex h-10 items-center justify-center rounded-md p-1"
+    style={{ backgroundColor: "var(--card-border)" }} // Assumindo que card-border é o fundo "muted"
+  >
     {children}
   </div>
 );
+
 const TabsTrigger = ({
   children,
   onClick,
@@ -210,17 +247,24 @@ const TabsTrigger = ({
   <button
     onClick={onClick}
     className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-      isActive ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+      isActive ? "shadow-sm" : "" // Removemos cores hardcoded
     }`}
+    style={
+      isActive
+        ? { backgroundColor: "var(--card-bg)", color: "var(--foreground)" }
+        : { color: "var(--foreground)", opacity: 0.7 } // Usando opacidade para estado inativo
+    }
   >
     {children}
   </button>
 );
+
 const TabsContent = ({ children }: { children: React.ReactNode }) => (
   <div className="mt-4">{children}</div>
 );
 
 // --- MODAIS ---
+// Modais já usam Card/Button, mas o fundo/backdrop precisa ser adaptado
 const TaskDetailModal = ({
   isOpen,
   onClose,
@@ -245,14 +289,18 @@ const TaskDetailModal = ({
   };
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" // Backdrop mantido
       onClick={onClose}
     >
       <div
-        className="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl"
+        className="relative z-50 w-full max-w-2xl rounded-2xl border" // Usando Card
+        style={{
+          backgroundColor: "var(--card-bg)",
+          borderColor: "var(--card-border)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b flex justify-between items-center">
+        <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: "var(--card-border)" }}>
           <h3 className="text-lg font-semibold">Editar Tarefa</h3>
           <Button
             variant="ghost"
@@ -277,7 +325,7 @@ const TaskDetailModal = ({
             }
           />
         </div>
-        <div className="p-4 flex justify-between items-center border-t">
+        <div className="p-4 flex justify-between items-center border-t" style={{ borderColor: "var(--card-border)" }}>
           <Button
             variant="ghost"
             size="icon"
@@ -291,6 +339,8 @@ const TaskDetailModal = ({
     </div>
   );
 };
+
+// Modal de Evento adaptado
 const EventDetailModal = ({
   isOpen,
   onClose,
@@ -319,10 +369,14 @@ const EventDetailModal = ({
       onClick={onClose}
     >
       <div
-        className="relative z-50 w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl"
+        className="relative z-50 w-full max-w-lg rounded-2xl border" // Usando estilo de Card
+        style={{
+          backgroundColor: "var(--card-bg)",
+          borderColor: "var(--card-border)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b flex justify-between items-center">
+        <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: "var(--card-border)" }}>
           <h3 className="text-lg font-semibold">Editar Evento</h3>
           <Button
             variant="ghost"
@@ -341,7 +395,7 @@ const EventDetailModal = ({
             }
           />
         </div>
-        <div className="p-4 flex justify-between items-center border-t">
+        <div className="p-4 flex justify-between items-center border-t" style={{ borderColor: "var(--card-border)" }}>
           <Button
             variant="ghost"
             size="icon"
@@ -360,12 +414,18 @@ const EventDetailModal = ({
 function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r bg-white dark:bg-gray-950 dark:border-gray-800 md:flex">
+    <aside
+      className="fixed bg-gray-950 inset-y-0 left-0 z-40 hidden w-20 flex-col border-r md:flex"
+    >
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
           href="/"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900 md:h-8 md:w-8 md:text-base"
+          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold md:h-8 md:w-8 md:text-base"
           title="Organon"
+          style={{
+            backgroundColor: "var(--button-bg)", // Assumindo que o logo usa o accent
+            color: "var(--button-text)",
+          }}
         >
           <span className="text-xl">O</span>
         </Link>
@@ -375,12 +435,19 @@ function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:text-gray-900 dark:hover:text-gray-50 ${
-                isActive
-                  ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
               title={item.label}
+              style={
+                isActive
+                  ? { // Estilo Ativo (era gray-100/dark:gray-800)
+                      backgroundColor: "#101828", // Usando card-border como "muted bg"
+                      color: "white",
+                    }
+                  : { // Estilo Inativo (era gray-500/dark:gray-400)
+                      color: "white",
+                      opacity: 0.7,
+                    }
+              }
             >
               <item.icon className="h-5 w-5" />
             </Link>
@@ -390,12 +457,19 @@ function Sidebar() {
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
           href="/perfil"
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:text-gray-900 dark:hover:text-gray-50 ${
-            pathname === "/perfil"
-              ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-              : "text-gray-500 dark:text-gray-400"
-          }`}
+          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
           title="Perfil"
+          style={
+            pathname === "/perfil"
+              ? { // Estilo Ativo
+                  backgroundColor: "var(--card-border)",
+                  color: "var(--foreground)",
+                }
+              : { // Estilo Inativo
+                  color: "white",
+                  opacity: 0.7,
+                }
+          }
         >
           <CircleUserRound className="h-5 w-5" />
         </Link>
@@ -520,14 +594,14 @@ const DailySummaryCard = ({
                       {task.name}
                     </Label>
                     {filteredData.isRange && (
-                      <span className="ml-auto text-xs text-gray-500">
+                      <span className="ml-auto text-xs opacity-70"> {/* Era text-gray-500 */}
                         {formatDateForTab(task.date!)}
                       </span>
                     )}
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm opacity-70"> {/* Era text-gray-500 */}
                   Nenhuma tarefa para este período.
                 </p>
               )}
@@ -548,14 +622,14 @@ const DailySummaryCard = ({
                       {event.startTime} - {event.name}
                     </p>
                     {filteredData.isRange && (
-                      <span className="ml-auto text-xs text-gray-500">
+                      <span className="ml-auto text-xs opacity-70"> {/* Era text-gray-500 */}
                         {formatDateForTab(event.date!)}
                       </span>
                     )}
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm opacity-70"> {/* Era text-gray-500 */}
                   Nenhum evento para este período.
                 </p>
               )}
@@ -619,6 +693,7 @@ const JournalCard = ({
     </Card>
   );
 };
+
 const HabitsPanelCard = ({
   habits,
   onUpdateProgress,
@@ -642,7 +717,8 @@ const HabitsPanelCard = ({
             return (
               <div
                 key={habit.id}
-                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                className="flex items-center justify-between p-4 rounded-lg"
+                style={{ backgroundColor: "var(--background)" }} // Adaptado (era gray-50 / dark:gray-800/50)
               >
                 <div>
                   <p className="font-medium">{habit.name}</p>
@@ -683,7 +759,7 @@ const HabitsPanelCard = ({
             );
           })
         ) : (
-          <p className="text-sm text-gray-500 col-span-full text-center">
+          <p className="text-sm opacity-70 col-span-full text-center"> {/* Era text-gray-500 */}
             Nenhum hábito ativo. Crie um na página de Hábitos!
           </p>
         )}
@@ -691,6 +767,7 @@ const HabitsPanelCard = ({
     </Card>
   );
 };
+
 
 // --- COMPONENTE PRINCIPAL DA PÁGINA HOME ---
 export default function HomePage() {
@@ -757,6 +834,7 @@ export default function HomePage() {
     }
   }, [user, loading, router, todayStr]);
 
+  // ... (Funções de handle (save/delete) permanecem as mesmas) ...
   const handleSaveTask = async (task: Partial<Task>) => {
     if (!user || !task.id) return;
     await updateDoc(doc(db, "users", user.uid, "tasks", task.id), task);
@@ -798,6 +876,7 @@ export default function HomePage() {
     );
   };
 
+
   if (loading || !user)
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -806,7 +885,13 @@ export default function HomePage() {
     );
 
   return (
-    <div className="min-h-screen w-full flex bg-gray-50 dark:bg-gray-950">
+    <div
+      className="min-h-screen w-full flex"
+      style={{
+        backgroundColor: "var(--background)",
+        color: "var(--foreground)",
+      }} // Aplicado ao wrapper principal
+    >
       <Sidebar />
 
       {/* --- MENU MOBILE --- */}
@@ -817,9 +902,10 @@ export default function HomePage() {
         />
       )}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-72 transform bg-white p-6 shadow-xl transition-transform duration-300 ease-in-out dark:bg-gray-950 md:hidden ${
+        className={`fixed top-0 left-0 z-50 h-full w-72 transform p-6 shadow-xl transition-transform duration-300 ease-in-out md:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ backgroundColor: "var(--card-bg)" }} // Fundo do menu mobile
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-xl font-bold">Organon</h3>
@@ -840,11 +926,18 @@ export default function HomePage() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
+                className="flex items-center gap-3 rounded-lg px-3 py-3 transition-all"
+                style={
                   isActive
-                    ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50"
-                }`}
+                    ? { // Estilo Ativo
+                        backgroundColor: "var(--card-border)",
+                        color: "var(--foreground)",
+                      }
+                    : { // Estilo Inativo
+                        color: "var(--foreground)",
+                        opacity: 0.8, // hover é tratado por :hover nos estilos globais ou tailwind base
+                      }
+                }
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
@@ -856,11 +949,18 @@ export default function HomePage() {
           <Link
             href="/perfil"
             onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
+            className="flex items-center gap-3 rounded-lg px-3 py-3 transition-all"
+            style={
               pathname === "/perfil"
-                ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50"
-            }`}
+                ? { // Estilo Ativo
+                    backgroundColor: "var(--card-border)",
+                    color: "var(--foreground)",
+                  }
+                : { // Estilo Inativo
+                    color: "var(--foreground)",
+                    opacity: 0.8,
+                  }
+            }
           >
             <CircleUserRound className="h-5 w-5" />
             Perfil
@@ -869,7 +969,13 @@ export default function HomePage() {
       </aside>
 
       <div className="flex flex-col flex-1 md:ml-20">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm px-4 md:px-6">
+        <header
+          className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b backdrop-blur-sm px-4 md:px-6"
+          style={{
+            backgroundColor: "oklch(13% 0.028 261.692)", // Assumindo var(--header-bg) para translucidez
+            borderColor: "var(--card-border)",
+          }}
+        >
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -879,7 +985,8 @@ export default function HomePage() {
             >
               <Menu className="h-6 w-6" />
             </Button>
-            <h1 className="text-xl font-semibold">Dashboard</h1>
+            {/* TÍTULO MODIFICADO CONFORME SOLICITADO */}
+            <h1 className="text-xl text-white font-semibold">Perfil e Configurações</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -887,7 +994,7 @@ export default function HomePage() {
               size="icon"
               className="relative rounded-full"
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-5 w-5 text-white" />
               <span className="absolute top-2 right-2 flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>

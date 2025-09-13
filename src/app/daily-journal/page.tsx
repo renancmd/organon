@@ -37,7 +37,7 @@ type JournalEntry = {
   date?: string;
 };
 
-// --- Componentes UI Mock (Com Tipagem Refinada) ---
+// --- Componentes UI (Refatorados com Variáveis CSS) ---
 const Card = ({
   children,
   className = "",
@@ -46,24 +46,37 @@ const Card = ({
   className?: string;
 }) => (
   <div
-    className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
+    className={`rounded-xl shadow-sm border ${className}`} // Removido p-6 e flex, pois o conteúdo já tem padding
+    style={{
+      backgroundColor: "var(--card-bg)",
+      borderColor: "var(--card-border)",
+    }}
   >
     {children}
   </div>
 );
+
 const CardHeader = ({ children }: { children: React.ReactNode }) => (
-  <div className="p-6 border-b dark:border-gray-800">{children}</div>
+  <div
+    className="p-6 border-b" // Mantido p-6 que estava no original
+    style={{ borderColor: "var(--card-border)" }}
+  >
+    {children}
+  </div>
 );
+
 const CardTitle = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-xl font-bold">{children}</h3>
+  <h3 className="text-xl font-bold">{children}</h3> // Alterado de lg para xl para bater com o original
 );
+
 const CardContent = ({
   children,
   className = "",
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <div className={`p-6 ${className}`}>{children}</div>;
+}) => <div className={`p-6 ${className}`}>{children}</div>; // Mantido p-6
+
 const CardFooter = ({
   children,
   className = "",
@@ -72,7 +85,8 @@ const CardFooter = ({
   className?: string;
 }) => (
   <div
-    className={`p-6 border-t dark:border-gray-800 flex justify-end ${className}`}
+    className={`p-6 border-t flex justify-end ${className}`} // Mantido p-6
+    style={{ borderColor: "var(--card-border)" }}
   >
     {children}
   </div>
@@ -91,17 +105,28 @@ const Button = ({
   ...props
 }: ButtonProps) => {
   const base =
-    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors";
+    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors disabled:opacity-50";
   const variants = {
-    default:
-      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
-    ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
-    outline: "border border-gray-200 dark:border-gray-700",
+    default: "",
+    ghost: "bg-transparent",
+    outline: "border",
   };
-  const sizes = { default: "h-10 py-2 px-4", icon: "h-9 w-9" };
+  const sizes = {
+    default: "h-10 px-4 py-2",
+    icon: "h-8 w-8", // Trocado h-9 w-9 por h-8 w-8 do perfil/page
+  };
+
+  const style: React.CSSProperties =
+    variant === "default"
+      ? { backgroundColor: "var(--button-bg)", color: "var(--button-text)" }
+      : variant === "outline" // Adicionado estilo para outline border
+      ? { borderColor: "var(--input-border)" }
+      : {};
+
   return (
     <button
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      style={style}
       {...props}
     >
       {children}
@@ -112,27 +137,35 @@ const Button = ({
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`flex h-10 w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm dark:border-gray-800 ${
+    className={`flex h-10 w-full rounded-md px-3 py-2 text-sm border transition-colors duration-300 ${
       props.className || ""
-    }`}
+    }`} // Adicionado merge de className
+    style={{
+      borderColor: "var(--input-border)",
+      backgroundColor: "var(--card-bg)",
+      color: "var(--foreground)",
+    }}
   />
 );
 
 const Label = (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
-  <label
-    {...props}
-    className="text-sm font-medium text-gray-600 dark:text-gray-400"
-  >
+  <label className="text-sm font-medium mb-1 block" {...props}>
     {props.children}
   </label>
 );
 
+// Textarea refatorada para seguir o padrão do novo Input
 const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className={`flex min-h-[120px] w-full rounded-md border border-gray-200 bg-transparent p-3 text-sm dark:border-gray-800 ${
+    className={`flex min-h-[120px] w-full rounded-md border p-3 text-sm transition-colors duration-300 ${
       props.className || ""
     }`}
+    style={{
+      borderColor: "var(--input-border)",
+      backgroundColor: "var(--card-bg)",
+      color: "var(--foreground)",
+    }}
   />
 );
 
@@ -214,23 +247,39 @@ export default function DailyJournalPage() {
     alert("Diário salvo com sucesso!");
   };
 
+  // Estado de loading agora dentro de um <main> temático
   if (loading || !user)
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <main
+        className="flex-1 p-6 lg:p-8 transition-colors duration-300 flex items-center justify-center"
+        style={{
+          backgroundColor: "var(--background)",
+          color: "var(--foreground)",
+        }}
+      >
         <p>Carregando...</p>
-      </div>
+      </main>
     );
 
   return (
-    <main className="flex-1 p-6 lg:p-8">
+    <main
+      className="flex-1 p-6 lg:p-8 transition-colors duration-300"
+      style={{
+        backgroundColor: "var(--background)",
+        color: "var(--foreground)",
+      }}
+    >
       <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-b dark:border-gray-800">
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-b"
+          style={{ borderColor: "var(--card-border)" }} // Aplicada variável de borda
+        >
           <h2 className="text-2xl font-bold">Registro Diário</h2>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
               type="date"
-              className="pl-10"
+              className="pl-10" // Input refatorado aceita className
               value={toYYYYMMDD(selectedDate)}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setSelectedDate(new Date(e.target.value + "T00:00:00"))
@@ -253,8 +302,8 @@ export default function DailyJournalPage() {
           <CardContent className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <Label>Pelo que você foi grato?</Label>
-                <Textarea
+                <Label>Pelo que você foi grato?</Label> {/* Label refatorada */}
+                <Textarea // Textarea refatorada
                   placeholder="Escreva aqui..."
                   value={journalEntry.gratitude}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -266,8 +315,8 @@ export default function DailyJournalPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Qual memória você guardou?</Label>
-                <Textarea
+                <Label>Qual memória você guardou?</Label> {/* Label refatorada */}
+                <Textarea // Textarea refatorada
                   placeholder="Escreva aqui..."
                   value={journalEntry.memory}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -277,13 +326,13 @@ export default function DailyJournalPage() {
               </div>
             </div>
             <div className="space-y-3">
-              <Label>Anexos do Dia</Label>
-              <Button variant="outline" className="w-full text-sm">
+              <Label>Anexos do Dia</Label> {/* Label refatorada */}
+              <Button variant="outline" className="w-full text-sm"> {/* Button refatorado */}
                 <Paperclip className="h-4 w-4 mr-2" />
                 Adicionar Anexo
               </Button>
             </div>
-            <div className="border-t dark:border-gray-800"></div>
+            <div className="border-t" style={{ borderColor: "var(--card-border)" }}></div> {/* Borda com variável */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-3">
                 <h4 className="font-semibold flex items-center gap-2">
@@ -342,7 +391,7 @@ export default function DailyJournalPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button onClick={handleSaveJournal} disabled={isSaving}>
+            <Button onClick={handleSaveJournal} disabled={isSaving}> {/* Button refatorado */}
               {isSaving ? "Salvando..." : "Salvar Diário"}
             </Button>
           </CardFooter>

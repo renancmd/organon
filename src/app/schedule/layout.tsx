@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation"; // Hook para pegar a rota atual
+import { usePathname } from "next/navigation";
 import {
   Home,
   ListChecks,
@@ -13,10 +13,10 @@ import {
   Bell,
   Menu,
   X,
-  FolderKanban,
+  FolderKanban, // Adicionado para "Projetos"
 } from "lucide-react";
 
-// --- DADOS DE NAVEGAÇÃO CENTRALIZADOS ---
+// Mantido os navItems da versão original de schedule
 const navItems = [
   { href: "/", icon: Home, label: "Início" },
   { href: "/projects", icon: FolderKanban, label: "Projetos" },
@@ -26,52 +26,7 @@ const navItems = [
   { href: "/daily-journal", icon: GanttChart, label: "Diário" },
 ];
 
-// --- COMPONENTE SIDEBAR (Desktop com link ativo dinâmico) ---
-function Sidebar() {
-  const pathname = usePathname(); // Pega a rota atual
-
-  return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r bg-white dark:bg-gray-950 dark:border-gray-800 md:flex">
-      <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-        <Link
-          href="/"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 text-lg font-semibold text-white dark:bg-gray-50 dark:text-gray-900 md:h-8 md:w-8 md:text-base"
-          title="Organon"
-        >
-          <span className="text-xl">O</span>
-        </Link>
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:text-gray-900 dark:hover:text-gray-50 ${
-                isActive
-                  ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
-              title={item.label}
-            >
-              <item.icon className="h-5 w-5" />
-            </Link>
-          );
-        })}
-      </nav>
-      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-        <Link
-          href="/perfil"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
-          title="Perfil"
-        >
-          <CircleUserRound className="h-5 w-5" />
-        </Link>
-      </nav>
-    </aside>
-  );
-}
-
-// --- COMPONENTE BOTÃO ---
+// ---------- BUTTON BASE (Copiado do perfil/layout.tsx) ----------
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "icon";
@@ -84,60 +39,112 @@ const Button = ({
   size = "default",
   ...props
 }: ButtonProps) => {
-  const baseClasses =
-    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:opacity-50 disabled:pointer-events-none";
-  const variantClasses = {
-    default:
-      "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
-    ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
-    outline:
-      "border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
-  };
-  const sizeClasses = { default: "h-10 py-2 px-4", icon: "h-10 w-10" };
+  const base = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors disabled:opacity-50";
+  const sizes = { default: "h-10 py-2 px-4", icon: "h-10 w-10" };
+  const style: React.CSSProperties =
+    variant === "default"
+      ? { backgroundColor: "var(--button-bg)", color: "var(--button-text)" }
+      : variant === "outline"
+      ? { borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)", color: "var(--foreground)" }
+      : { backgroundColor: "transparent", color: "var(--foreground)" };
+
   return (
-    <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
-      {...props}
-    >
+    <button className={`${base} ${sizes[size]} ${className}`} style={style} {...props}>
       {children}
     </button>
   );
 };
 
-// --- COMPONENTE LAYOUT PRINCIPAL DA AGENDA ---
-export default function AgendaLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// ---------- SIDEBAR (Refatorado com CSS Vars) ----------
+function Sidebar() {
+  const pathname = usePathname();
+
+  // Função helper para estilo dos links
+  const getLinkStyle = (isActive: boolean) => ({
+    backgroundColor: isActive ? "#101828" : "transparent",
+    color: "var(--foreground)",
+  });
+
+  return (
+    <aside
+      className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col border-r md:flex"
+      style={{ backgroundColor: "oklch(13% 0.028 261.692)", borderColor: "var(--card-border)" }}
+    >
+      <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+        <Link
+          href="/"
+          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold md:h-8 md:w-8 md:text-base"
+          style={{ backgroundColor: "var(--button-bg)", color: "var(--button-text)" }}
+          title="Organon"
+        >
+          <span className="text-xl">O</span>
+        </Link>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+              title={item.label}
+              style={getLinkStyle(isActive)}
+            >
+              <item.icon className="h-5 w-5 text-white" />
+            </Link>
+          );
+        })}
+      </nav>
+      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+        <Link
+          href="/perfil"
+          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+          style={getLinkStyle(pathname === "/perfil")}
+          title="Perfil"
+        >
+          <CircleUserRound className="h-5 w-5" />
+        </Link>
+      </nav>
+    </aside>
+  );
+}
+
+// ---------- LAYOUT PRINCIPAL (Refatorado com CSS Vars) ----------
+export default function AgendaLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  const getLinkStyle = (isActive: boolean) => ({
+    backgroundColor: isActive ? "var(--card-bg)" : "transparent",
+    color: "var(--foreground)",
+  });
+
   return (
-    <div className="min-h-screen w-full flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <div
+      className="min-h-screen w-full flex transition-colors duration-300"
+      style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}
+    >
       <Sidebar />
 
-      {/* --- MENU MOBILE --- */}
+      {/* MENU MOBILE BACKDROP */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
+      {/* MENU MOBILE */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-72 transform bg-white p-6 shadow-xl transition-transform duration-300 ease-in-out dark:bg-gray-950 md:hidden ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 z-50 h-full w-72 p-6 shadow-xl transition-transform duration-300 ease-in-out md:hidden`}
+        style={{
+          backgroundColor: "var(--background)",
+          transform: isMobileMenuOpen ? "translateX(0)" : "translateX(-100%)",
+        }}
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-xl font-bold">Organon</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(false)}
-            className="h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -149,11 +156,8 @@ export default function AgendaLayout({
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
-                  isActive
-                    ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50"
-                }`}
+                className="flex items-center gap-3 rounded-lg px-3 py-3 transition-all"
+                style={getLinkStyle(isActive)}
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
@@ -165,11 +169,8 @@ export default function AgendaLayout({
           <Link
             href="/perfil"
             onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
-              pathname === "/perfil"
-                ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50"
-            }`}
+            className="flex items-center gap-3 rounded-lg px-3 py-3 transition-all"
+            style={getLinkStyle(pathname === "/perfil")}
           >
             <CircleUserRound className="h-5 w-5" />
             Perfil
@@ -177,31 +178,30 @@ export default function AgendaLayout({
         </div>
       </aside>
 
-      {/* --- CONTEÚDO PRINCIPAL DA PÁGINA --- */}
+      {/* CONTEÚDO PRINCIPAL */}
       <div className="flex flex-col flex-1 md:ml-20">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm px-4 md:px-6">
+        <header
+          className="sticky top-0 z-30 flex bg-gray-950 text-white h-16 items-center justify-between gap-4 border-b px-4 md:px-6"
+        >
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(true)}
-            >
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(true)}>
               <Menu className="h-6 w-6" />
             </Button>
             <h1 className="text-xl font-semibold">Agenda</h1>
           </div>
 
           <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative rounded-full"
-            >
-              <Bell className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="relative rounded-full">
+              <Bell className="h-5 w-5 text-white" />
               <span className="absolute top-2 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                <span
+                  className="animate-ping absolute inline-flex h-full w-full rounded-full"
+                  style={{ backgroundColor: "#f87171" }} // Cor mantida pois é específica de notificação
+                ></span>
+                <span
+                  className="relative inline-flex rounded-full h-2 w-2"
+                  style={{ backgroundColor: "#ef4444" }} // Cor mantida
+                ></span>
               </span>
             </Button>
           </div>
@@ -211,3 +211,4 @@ export default function AgendaLayout({
     </div>
   );
 }
+

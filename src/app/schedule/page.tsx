@@ -1,9 +1,18 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
+
+const useRouter = () => ({
+  push: (href: string) => {
+    // Em um ambiente de produção real, isso seria uma navegação
+    // mas para a simulação, mudamos o hash para evitar recarregamento da página.
+    window.location.hash = href;
+  },
+});
+
+
 import {
   collection,
   onSnapshot,
@@ -43,7 +52,7 @@ const availableColors = [
   "bg-pink-500",
 ];
 
-// --- Componentes UI ---
+// --- Componentes UI (Design Original Restaurado) ---
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "ghost" | "outline";
   size?: "default" | "icon";
@@ -62,7 +71,7 @@ const Button = ({
     default:
       "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-50 dark:text-gray-900",
     ghost: "hover:bg-gray-100 dark:hover:bg-gray-800",
-    outline: "border border-gray-200 dark:border-gray-700",
+    outline: "border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
   };
   const sizeClasses = { default: "h-10 py-2 px-4", icon: "h-9 w-9" };
   return (
@@ -102,7 +111,7 @@ const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   </select>
 );
 
-// --- Modal de Evento ---
+// --- Modal de Evento (Design Original Restaurado) ---
 function EventModal({
   isOpen,
   onClose,
@@ -222,7 +231,7 @@ function EventModal({
                   onClick={() => handleFieldChange("color", color)}
                   className={`w-8 h-8 rounded-full ${color} ${
                     currentEvent.color === color
-                      ? "ring-2 ring-offset-2 ring-gray-900 dark:ring-white"
+                      ? "ring-2 ring-offset-2 ring-gray-900 dark:ring-white dark:ring-offset-gray-900"
                       : ""
                   }`}
                 ></button>
@@ -246,7 +255,7 @@ function EventModal({
   );
 }
 
-// --- Componente Calendário (Desktop) ---
+// --- Componente Calendário (Design Original Restaurado) ---
 const CalendarView = ({
   onDateClick,
   events,
@@ -328,7 +337,7 @@ const CalendarView = ({
   );
 };
 
-// --- NOVO Componente: Lista de Eventos do Dia ---
+// --- Lista de Eventos do Dia (Design Original Restaurado) ---
 const DailyEventList = ({
   events,
   onEventClick,
@@ -387,7 +396,7 @@ const DailyEventList = ({
   );
 };
 
-// --- NOVO Componente: Visualização de Agenda para Mobile ---
+// --- Visualização de Agenda para Mobile (Design Original Restaurado) ---
 const MobileAgendaView = ({
   events,
   currentDate,
@@ -514,7 +523,6 @@ export default function AgendaPage() {
     );
 
   return (
-    // Layout principal que se adapta: flex-col no mobile, flex-row no desktop
     <div className="flex flex-col lg:flex-row flex-1 h-[calc(100vh-4rem)]">
       <EventModal
         isOpen={isModalOpen}
@@ -650,3 +658,5 @@ export default function AgendaPage() {
     </div>
   );
 }
+
+

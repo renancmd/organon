@@ -1,26 +1,32 @@
+/* Import Tailwind v4 */
 @import "tailwindcss";
 
+@source inline("bg-{red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{400,500,600}");
+
+/* 1. Tell Tailwind about your custom colors */
+@theme {
+  --color-background: var(--bg-main);
+  --color-text-primary: var(--text-main);
+  --color-brand: var(--brand-main);
+}
+
+/* 2. Define the Light Theme (Default) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-main: #ffffff;
+  --text-main: #121212;
+  --brand-main: #3b82f6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* 3. Define the Dark Theme */
+.dark {
+  --bg-main: #181818;
+  --text-main: #f8f8f8;
+  --brand-main: #60a5fa;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* 4. Apply the global background and text */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

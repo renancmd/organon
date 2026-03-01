@@ -1,22 +1,22 @@
-'use client'; // Necessário se você estiver usando Next.js App Router
+'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../config/firebase'; // Ajuste o caminho para o seu arquivo de configuração do Firebase
+import { auth } from '../config/firebase';
 
-// Define a tipagem do nosso contexto
+
 interface AuthContextType {
 	user: User | null;
 	loading: boolean;
 }
 
-// Cria o contexto com valores padrão
+
 const AuthContext = createContext<AuthContextType>({
 	user: null,
 	loading: true,
 });
 
-// Hook personalizado para facilitar o uso do contexto
+
 export const useAuth = () => useContext(AuthContext);
 
 interface AuthProviderProps {
@@ -28,13 +28,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		// onAuthStateChanged é um listener do Firebase que observa mudanças no estado de login
+
 		const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
 			setUser(currentUser);
 			setLoading(false);
 		});
 
-		// Limpa o listener quando o componente é desmontado para evitar memory leaks
+
 		return () => unsubscribe();
 	}, []);
 

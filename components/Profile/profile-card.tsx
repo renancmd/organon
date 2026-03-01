@@ -1,7 +1,7 @@
 "use client";
 
 import { User, Mail, Camera, Edit2, Check, LogOut, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react"; // Added useEffect
+import { useState, useEffect } from "react";
 import { getProfile, updateEmail } from "../../services/db.service.ts";
 import { logout } from "../../services/auth.service.ts";
 
@@ -16,7 +16,7 @@ export default function ProfileCard() {
 		}));
 	}, []);
 
-	// Logout user
+
 	const handleLogout = () => {
 		logout();
 	}

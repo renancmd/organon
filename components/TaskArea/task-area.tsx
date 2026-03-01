@@ -31,7 +31,7 @@ export default function TaskArea({
 	areaName = "Career & Growth",
 	areaColor = "bg-blue-500",
 	initialTasks = [],
-	onEdit // 👇 FIXED: Added onEdit here so it's defined inside the component!
+	onEdit
 }: TaskAreaProps) {
 
 	const [tasks, setTasks] = useState<TaskCardProps[]>(initialTasks);
@@ -43,15 +43,15 @@ export default function TaskArea({
 	const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
 	const [timeFilter, setTimeFilter] = useState<"all" | "today" | "upcoming">("all");
 
-	// --- RESTORED LOGIC STARTS HERE ---
 
-	// 1. Re-add the filtering logic
+
+
 	const filteredTasks = useMemo(() => {
 		return tasks.filter((task) => {
 			const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
 			let matchesTime = true;
 
-			// Adjust this logic if your database dates are formatted differently than "Today"
+
 			if (timeFilter === "today") {
 				matchesTime = task.date === "Today";
 			} else if (timeFilter === "upcoming") {
@@ -61,7 +61,7 @@ export default function TaskArea({
 		});
 	}, [tasks, priorityFilter, timeFilter]);
 
-	// 2. Re-add the Drag and Drop sensors
+
 	const sensors = useSensors(
 		useSensor(PointerSensor),
 		useSensor(KeyboardSensor, {
@@ -69,7 +69,7 @@ export default function TaskArea({
 		})
 	);
 
-	// 3. Re-add the Drag End handler
+
 	const handleDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event;
 
@@ -80,17 +80,17 @@ export default function TaskArea({
 				return arrayMove(items, oldIndex, newIndex);
 			});
 
-			// TODO: Here is where you would call a Firebase update function 
-			// to save the new order of tasks in the database!
+
+
 		}
 	};
 
-	// --- RESTORED LOGIC ENDS HERE ---
+
 
 	return (
 		<div className="flex h-full flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-[#1a1a1a]">
 
-			{/* Header & Filters */}
+			
 			<div className="mb-6 flex flex-col gap-4 border-b border-gray-100 pb-5 dark:border-gray-800/60 sm:flex-row sm:items-center sm:justify-between">
 				<div className="flex items-center gap-3">
 					<div className={`h-5 w-5 shrink-0 rounded-md shadow-sm ${areaColor}`} />
@@ -126,7 +126,7 @@ export default function TaskArea({
 				</div>
 			</div>
 
-			{/* Drag and Drop Context */}
+			
 			<DndContext
 				id={`dnd-${areaName}`}
 				sensors={sensors}
@@ -148,6 +148,7 @@ export default function TaskArea({
 									date={task.date}
 									time={task.time}
 									priority={task.priority}
+									isCompleted={task.isCompleted}
 								/>
 							))
 						) : (

@@ -18,7 +18,7 @@ export default function SignInPage() {
 		e.preventDefault();
 
 		if (login(email, password)) {
-		  router.push("/");
+			router.push("/");
 		}
 
 	}

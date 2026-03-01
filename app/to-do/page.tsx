@@ -35,7 +35,7 @@ export default function ToDo() {
 	const { user } = useAuth();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
-	// 👇 State for the edit modal
+
 	const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
 	const [isCompletedOpen, setIsCompletedOpen] = useState(false);
@@ -78,7 +78,7 @@ export default function ToDo() {
 		};
 
 		fetchData();
-	}, [user, isModalOpen, editingTaskId]); // Re-fetch when modals close so UI updates!
+	}, [user, isModalOpen, editingTaskId]);
 
 	if (!user) {
 		return <h1>You need to be logged in to access this page</h1>;
@@ -98,7 +98,7 @@ export default function ToDo() {
 				</button>
 			</div>
 
-			{/* Active Task Areas Grid */}
+
 			<div className="mx-auto w-full max-w-7xl px-6 md:px-8">
 				<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 					{isLoading ? (
@@ -115,7 +115,7 @@ export default function ToDo() {
 									areaName={area.name}
 									areaColor={area.color}
 									initialTasks={areaTasks}
-									// 👇 Pass the onEdit function down to TaskArea
+
 									onEdit={(id) => setEditingTaskId(id)}
 								/>
 							);
@@ -128,7 +128,7 @@ export default function ToDo() {
 				</div>
 			</div>
 
-			{/* Completed Tasks Dropdown */}
+
 			{!isLoading && completedTasks.length > 0 && (
 				<div className="mx-auto w-full max-w-7xl px-6 md:px-8 mt-12">
 					<div className="border-t border-gray-200 dark:border-gray-800 pt-6">
@@ -152,7 +152,7 @@ export default function ToDo() {
 												date={task.date}
 												time={task.time}
 												priority={task.priority}
-												// 👇 Pass the onEdit function to completed tasks
+
 												onEdit={(id) => setEditingTaskId(id)}
 											/>
 										))}
@@ -164,13 +164,13 @@ export default function ToDo() {
 				</div>
 			)}
 
-			{/* Modals */}
+
 			<TodoModal
 				isOpen={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
 			/>
 
-			{/* 👇 Render the Edit Modal here */}
+
 			<EditTodoModal
 				isOpen={!!editingTaskId}
 				taskId={editingTaskId}

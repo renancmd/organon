@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Check, X } from "lucide-react";
 import { getAreas } from "../../services/db.service.ts";
 
-// Define the shape of a Life Area
+
 type Area = {
 	id: string;
 	name: string;
@@ -12,14 +12,14 @@ type Area = {
 };
 
 export default function LifeArea() {
-	// Start with empty data and a loading state
+
 	const [areas, setAreas] = useState<Area[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [editForm, setEditForm] = useState<{ name: string; color: string }>({ name: "", color: "" });
 
-	// Fetch areas on component mount
+
 	useEffect(() => {
 		const fetchAreasData = async () => {
 			try {
@@ -37,7 +37,7 @@ export default function LifeArea() {
 
 	const handleNewArea = () => {
 		const newId = Math.random().toString(36).substr(2, 9);
-		// Defaulting to a Tailwind class instead of a hex code
+
 		const newArea = { id: newId, name: "", color: "bg-blue-500" };
 
 		setAreas([...areas, newArea]);
@@ -57,7 +57,7 @@ export default function LifeArea() {
 			area.id === id ? { ...area, name: editForm.name, color: editForm.color } : area
 		));
 
-		// TODO: Call your Firebase update/create function here to persist changes to the DB
+
 
 		setEditingId(null);
 	};
@@ -74,7 +74,7 @@ export default function LifeArea() {
 	const handleDelete = (id: string) => {
 		setAreas(areas.filter((area) => area.id !== id));
 
-		// TODO: Call your Firebase delete function here to remove it from the DB
+
 	};
 
 	return (
@@ -107,7 +107,7 @@ export default function LifeArea() {
 								{editingId === area.id ? (
 									<div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
 										<div className="flex flex-1 items-center gap-3">
-											{/* Changed to text input since we are using Tailwind classes like 'bg-red-500' */}
+
 											<input
 												type="text"
 												value={editForm.color}
@@ -146,7 +146,7 @@ export default function LifeArea() {
 								) : (
 									<>
 										<div className="flex items-center gap-3">
-											{/* Applied color dynamically using Tailwind classes */}
+
 											<div className={`h-4 w-4 rounded-full shadow-sm ${area.color}`} />
 											<span className="font-medium text-text-primary dark:text-gray-200">
 												{area.name}

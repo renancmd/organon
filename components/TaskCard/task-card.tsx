@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Calendar, Clock, Flag, GripVertical } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { completeTask } from "../../services/db.service.ts";
+import { completeTask } from "../../services/db.service";
 
 export type Priority = "low" | "medium" | "high";
 

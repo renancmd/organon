@@ -1,9 +1,9 @@
 "use client";
 
-import ProfileCard from "../../components/Profile/profile-card.tsx";
-import LifeArea from "../../components/LifeArea/life-area.tsx";
-import { useAuth } from "../../providers/auth-provider.tsx";
-import "../globals.css";
+import ProfileCard from "../../../components/Profile/profile-card";
+import LifeArea from "../../../components/LifeArea/life-area";
+import { useAuth } from "../../../providers/auth-provider";
+import "../../globals.css";
 
 export default function Profile() {
 	const { user } = useAuth();

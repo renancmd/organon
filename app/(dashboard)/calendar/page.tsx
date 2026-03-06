@@ -19,9 +19,9 @@ import {
 	parseISO,
 	addDays
 } from "date-fns";
-import { getEvents } from "../../services/db.service.ts";
-import NewEventModal from "../../components/EventNewModal/new-event-modal.tsx";
-import EditEventModal from "../../components/EditEventModal/edit-event-modal.tsx"; // Make sure path is correct!
+import { getEvents } from "../../../services/db.service";
+import NewEventModal from "../../../components/EventNewModal/new-event-modal";
+import EditEventModal from "../../../components/EditEventModal/edit-event-modal"; // Make sure path is correct!
 
 interface CalendarEvent {
 	id: string;

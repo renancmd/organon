@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
 	X, Calendar, Clock, Flag, Paperclip, Plus, Trash2, CheckCircle2
 } from "lucide-react";
-import { getAreas, createTask } from "../../services/db.service.ts";
+import { getAreas, createTask } from "../../services/db.service";
 
 interface TodoModalProps {
 	isOpen: boolean;

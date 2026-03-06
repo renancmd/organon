@@ -2,27 +2,42 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { CheckCircle2, Calendar as CalendarIcon, Loader2, Check } from "lucide-react";
-import { getTasks, getEvents, completeTask } from "../../services/db.service.ts";
+import { getTasks, getEvents, completeTask } from "../../services/db.service";
 import { parseISO, isSameDay, addDays, startOfDay, isWithinInterval } from "date-fns";
 
-
-import EditTodoModal from "../../components/EditTaskModal/edit-task-modal.tsx";
-import EditEventModal from "../../components/EditEventModal/edit-event-modal.tsx";
+import EditTodoModal from "../../components/EditTaskModal/edit-task-modal";
+import EditEventModal from "../../components/EditEventModal/edit-event-modal";
 
 type Tab = "today" | "tomorrow" | "next7";
+
+// Define the shape of your data so TypeScript knows what to expect
+interface Task {
+	id: string;
+	name?: string;
+	date?: string;
+	time?: string;
+	completed?: boolean;
+	color?: string;
+}
+
+interface CalendarEvent {
+	id: string;
+	name?: string;
+	date?: string;
+	startTime?: string;
+	color?: string;
+}
 
 export default function Overview() {
 	const [activeTab, setActiveTab] = useState<Tab>("today");
 
-
-	const [tasks, setTasks] = useState<any[]>([]);
-	const [events, setEvents] = useState<any[]>([]);
+	// Update state to use the new interfaces instead of empty tuples
+	const [tasks, setTasks] = useState<Task[]>([]);
+	const [events, setEvents] = useState<CalendarEvent[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
-
 
 	const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 	const [editingEventId, setEditingEventId] = useState<string | null>(null);
-
 
 	const fetchDashboardData = useCallback(async (silent = false) => {
 		if (!silent) setIsLoading(true);
@@ -44,25 +59,23 @@ export default function Overview() {
 		fetchDashboardData();
 	}, [fetchDashboardData]);
 
-
 	const handleToggleTaskComplete = async (taskId: string, currentStatus: boolean, e: React.MouseEvent) => {
 		e.stopPropagation();
 
 		try {
 			await completeTask(!currentStatus, taskId);
-
 			fetchDashboardData(true);
 		} catch (error) {
 			console.error("Failed to complete task:", error);
 		}
 	};
 
-
 	const processedData = useMemo(() => {
+		// Update the result object to cast arrays to our specific interfaces
 		const result = {
-			today: { tasks: [] as any[], events: [] as any[] },
-			tomorrow: { tasks: [] as any[], events: [] as any[] },
-			next7: { tasks: [] as any[], events: [] as any[] },
+			today: { tasks: [] as Task[], events: [] as CalendarEvent[] },
+			tomorrow: { tasks: [] as Task[], events: [] as CalendarEvent[] },
+			next7: { tasks: [] as Task[], events: [] as CalendarEvent[] },
 		};
 
 		const today = startOfDay(new Date());
@@ -108,7 +121,6 @@ export default function Overview() {
 					{isLoading && <Loader2 className="animate-spin text-brand" size={20} />}
 				</div>
 
-
 				<div className="mb-6 flex flex-row gap-3 overflow-x-auto pb-2 scrollbar-hide">
 					<TabButton
 						label="Today"
@@ -130,7 +142,6 @@ export default function Overview() {
 				<div className="pt-6 border-t border-gray-100 dark:border-gray-800/60">
 					<div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-12">
 
-
 						<section>
 							<div className="mb-4 flex items-center gap-2 border-b border-gray-200 pb-2 dark:border-gray-800">
 								<CheckCircle2 className="text-brand" size={20} />
@@ -145,15 +156,12 @@ export default function Overview() {
 											onClick={() => setEditingTaskId(task.id)}
 											className="group flex items-center gap-3 rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-100 cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800"
 										>
-
 											<button
-												onClick={(e) => handleToggleTaskComplete(task.id, task.completed, e)}
+												onClick={(e) => handleToggleTaskComplete(task.id, task.completed ?? false, e)}
 												className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all hover:bg-gray-200 dark:hover:bg-gray-700 ${task.color ? task.color.replace('bg-', 'border-') : 'border-gray-400 dark:border-gray-600'}`}
 											>
-
 												<Check size={14} className="opacity-0 group-hover:opacity-30 transition-opacity text-gray-500 dark:text-gray-400" />
 											</button>
-
 
 											<div className="flex flex-wrap items-center gap-2">
 												<span>{task.name}</span>
@@ -168,7 +176,6 @@ export default function Overview() {
 								)}
 							</ul>
 						</section>
-
 
 						<section>
 							<div className="mb-4 flex items-center gap-2 border-b border-gray-200 pb-2 dark:border-gray-800">
@@ -185,7 +192,6 @@ export default function Overview() {
 											className="flex items-center gap-3 rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-100 cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800"
 										>
 											<div className={`h-3 w-3 rounded-full shrink-0 ${event.color || 'bg-brand'}`} />
-
 
 											<div className="flex flex-wrap items-center gap-2">
 												<span>{event.name}</span>
@@ -204,7 +210,6 @@ export default function Overview() {
 					</div>
 				</div>
 			</div>
-
 
 			<EditTodoModal
 				isOpen={!!editingTaskId}

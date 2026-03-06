@@ -2,7 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { X, Calendar, Clock, Palette, Repeat, CheckCircle2, MapPin, Trash2 } from "lucide-react";
-import { updateEvent, deleteEvent, getAreas, getEvents } from "../../services/db.service.ts";
+import { updateEvent, deleteEvent, getAreas, getEvents } from "../../services/db.service";
+
+interface CalendarEvent {
+    id: string;
+    name?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    location?: string;
+    recurrence?: string;
+    color?: string;
+}
 
 interface EditEventModalProps {
 	isOpen: boolean;
@@ -38,7 +49,7 @@ export default function EditEventModal({ isOpen, eventId, onClose, onSuccess }: 
 			setIsLoading(true);
 			try {
 
-				const [fetchedAreas, fetchedEvents] = await Promise.all([
+				const [fetchedAreas, fetchedEve] = await Promise.all([
 					getAreas(),
 					getEvents()
 				]);
@@ -46,7 +57,7 @@ export default function EditEventModal({ isOpen, eventId, onClose, onSuccess }: 
 				setAreas(fetchedAreas as Area[]);
 
 
-				const eventToEdit = (fetchedEvents as any[]).find((e) => e.id === eventId);
+				const eventToEdit = (fetchedEve as CalendarEvent[]).find((e) => e.id === eventId);
 
 				if (eventToEdit) {
 					setName(eventToEdit.name || "");

@@ -4,7 +4,18 @@ import { useState, useEffect } from "react";
 import {
 	X, Calendar, Clock, Flag, Paperclip, Plus, Trash2, CheckCircle2
 } from "lucide-react";
-import { getAreas, getTasks, updateTask, deleteTask } from "../../services/db.service.ts";
+import { getAreas, getTasks, updateTask, deleteTask } from "../../services/db.service";
+
+interface Task {
+	id: string;
+	name?: string;
+	description?: string;
+	date?: string;
+	time?: string;
+	priority?: string;
+	color?: string;
+	subtasks?: { id: string; name: string }[];
+}
 
 interface EditTodoModalProps {
 	isOpen: boolean;
@@ -51,7 +62,7 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 				setAreas(fetchedAreas as Area[]);
 
 
-				const taskToEdit = fetchedTasks.find((t: any) => t.id === taskId);
+				const taskToEdit = (fetchedTasks as Task[]).find((t) => t.id === taskId);
 
 				if (taskToEdit) {
 					setTaskName(taskToEdit.name || "");
@@ -74,7 +85,7 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 
 
 					if (taskToEdit.subtasks) {
-						setSubtasks(taskToEdit.subtasks.map((st: any) => ({
+						setSubtasks(taskToEdit.subtasks.map((st) => ({
 							id: st.id,
 							title: st.name
 						})));

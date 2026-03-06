@@ -1,9 +1,8 @@
 "use client";
+import { useAuth } from "../../../providers/auth-provider";
+import "../../globals.css";
 
-import { useAuth } from "../../providers/auth-provider.tsx";
-import "../globals.css";
-
-export default function Journal() {
+export default function Projects() {
 	const { user } = useAuth();
 
 	if (!user) {
@@ -16,4 +15,3 @@ export default function Journal() {
 		</div>
 	);
 }
-

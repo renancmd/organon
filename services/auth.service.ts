@@ -1,4 +1,4 @@
-import { auth } from "../config/firebase.ts";
+import { auth } from "../config/firebase";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 // Sign In

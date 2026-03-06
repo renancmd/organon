@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Check, X } from "lucide-react";
-import { getAreas } from "../../services/db.service.ts";
+import { getAreas } from "../../services/db.service";
 
 
 type Area = {
@@ -174,7 +174,7 @@ export default function LifeArea() {
 						))
 					) : (
 						<p className="py-4 text-center text-sm italic text-gray-500">
-							No life areas created yet. Click "New area" to start organizing.
+							No life areas created yet. Click &quot;New area&quot; to start organizing.
 						</p>
 					)}
 				</div>

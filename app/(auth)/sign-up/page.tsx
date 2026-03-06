@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { Hexagon, Mail, Lock, Github, User } from "lucide-react";
-import "../globals.css"; 
+import "../../globals.css"; 
 
 export default function SignUpPage() {
+  const handleSubmit = () => {};
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-8">
       

@@ -1,16 +1,16 @@
 "use client";
 
-import { useAuth } from "../../providers/auth-provider.tsx";
+import { useAuth } from "../../../providers/auth-provider";
 import { useState, useEffect } from "react";
-import TaskArea from "../../components/TaskArea/task-area.tsx";
-import TodoModal from "../../components/TodoModal/todo-modal.tsx";
-import EditTodoModal from "../../components/EditTaskModal/edit-task-modal.tsx";
-import TaskCard, { TaskCardProps, Priority } from "../../components/TaskCard/task-card.tsx";
-import { getAreas, getTasks } from "../../services/db.service.ts";
+import TaskArea from "../../../components/TaskArea/task-area";
+import TodoModal from "../../../components/TodoModal/todo-modal";
+import EditTodoModal from "../../../components/EditTaskModal/edit-task-modal";
+import TaskCard, { TaskCardProps, Priority } from "../../../components/TaskCard/task-card";
+import { getAreas, getTasks } from "../../../services/db.service";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import "../globals.css";
+import "../../globals.css";
 
 type Area = {
 	id: string;

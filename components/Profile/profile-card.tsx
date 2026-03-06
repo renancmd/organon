@@ -2,20 +2,26 @@
 
 import { User, Mail, Camera, Edit2, Check, LogOut, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getProfile, updateEmail } from "../../services/db.service.ts";
-import { logout } from "../../services/auth.service.ts";
+import { getProfile, updateEmail } from "../../services/db.service";
+import { logout } from "../../services/auth.service";
 
 export default function ProfileCard() {
 	const [email, setEmail] = useState<string>("");
 	const [name, setName] = useState<string>("");
 
 	useEffect(() => {
-		getProfile().then((profile => {
-			setEmail(profile.email);
-			setName(profile.name);
-		}));
+		getProfile()
+			.then((profile) => {
+				// Only update state if a valid profile was returned
+				if (profile) {
+					setEmail(profile.email);
+					setName(profile.name);
+				}
+			})
+			.catch((error) => {
+				console.error("Error fetching profile:", error);
+			});
 	}, []);
-
 
 	const handleLogout = () => {
 		logout();
@@ -30,7 +36,6 @@ export default function ProfileCard() {
 
 				<div className="flex flex-col gap-8 md:flex-row md:items-start md:gap-12">
 
-
 					<div className="flex flex-col items-center gap-4">
 						<div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-gray-100 border-4 border-white shadow-md dark:border-gray-800 dark:bg-gray-800">
 							<User size={64} className="text-gray-400 dark:text-gray-500" />
@@ -44,9 +49,7 @@ export default function ProfileCard() {
 						</div>
 					</div>
 
-
 					<div className="flex flex-1 flex-col gap-6 w-full">
-
 
 						<div className="flex flex-col gap-2">
 							<label className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -62,7 +65,6 @@ export default function ProfileCard() {
 								</button>
 							</div>
 						</div>
-
 
 						<div className="flex flex-col gap-2">
 							<label className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -81,7 +83,6 @@ export default function ProfileCard() {
 
 					</div>
 				</div>
-
 
 				<div className="mt-10 border-t border-gray-100 pt-8 dark:border-gray-800/60">
 					<div className="flex flex-col gap-4 sm:flex-row sm:items-center">

@@ -1,9 +1,9 @@
 "use client";
 
-import { useAuth } from "../../providers/auth-provider.tsx";
-import "../globals.css";
+import { useAuth } from "../../../providers/auth-provider";
+import "../../globals.css";
 
-export default function Habits() {
+export default function Journal() {
 	const { user } = useAuth();
 
 	if (!user) {

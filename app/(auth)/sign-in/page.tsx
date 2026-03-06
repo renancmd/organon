@@ -3,9 +3,9 @@
 import { Hexagon, Mail, Lock, Github } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login } from "../../services/auth.service.ts";
+import { login } from "../../../services/auth.service";
 import Link from "next/link";
-import "../globals.css";
+import "../../globals.css";
 
 export default function SignInPage() {
 	const [email, setEmail] = useState("");
@@ -17,9 +17,8 @@ export default function SignInPage() {
 	const handleLoginSubmit = (e: React.SubmitEvent) => {
 		e.preventDefault();
 
-		if (login(email, password)) {
-			router.push("/");
-		}
+		login(email, password);
+		router.push("/");
 
 	}
 
@@ -36,7 +35,7 @@ export default function SignInPage() {
 						Sign in to Organon
 					</h1>
 					<p className="text-sm text-gray-500 dark:text-gray-400">
-						Welcome back! Please enter your details.
+						Welcome back! Please enter your details to login into Organon.
 					</p>
 				</div>
 
@@ -47,7 +46,7 @@ export default function SignInPage() {
 							Email
 						</label>
 						<div className="relative">
-							<div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+							<div className="pointer-eve-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
 								<Mail size={18} />
 							</div>
 							<input
@@ -67,7 +66,7 @@ export default function SignInPage() {
 							Password
 						</label>
 						<div className="relative">
-							<div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+							<div className="pointer-eve-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
 								<Lock size={18} />
 							</div>
 							<input

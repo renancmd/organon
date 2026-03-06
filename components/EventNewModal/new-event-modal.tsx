@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Calendar, Clock, Palette, Repeat, CheckCircle2, MapPin } from "lucide-react";
-import { createEvent, getAreas } from "../../services/db.service.ts";
+import { createEvent, getAreas } from "../../services/db.service";
 
 interface NewEventModalProps {
 	isOpen: boolean;

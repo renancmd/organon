@@ -14,7 +14,7 @@ interface Task {
 	time?: string;
 	priority?: string;
 	color?: string;
-	subtasks?: { id: string; name: string }[];
+	subtasks?: { id: string; name: string; completed?: boolean }[];
 }
 
 interface EditTodoModalProps {
@@ -37,15 +37,12 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 	const [date, setDate] = useState("");
 	const [time, setTime] = useState("");
 
-
 	const [areas, setAreas] = useState<Area[]>([]);
 	const [selectedArea, setSelectedArea] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 
-
-	const [subtasks, setSubtasks] = useState<{ id: string; title: string }[]>([]);
+	const [subtasks, setSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
 	const [newSubtask, setNewSubtask] = useState("");
-
 
 	useEffect(() => {
 		if (!isOpen || !taskId) return;
@@ -53,14 +50,12 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 		const loadData = async () => {
 			setIsLoading(true);
 			try {
-
 				const [fetchedAreas, fetchedTasks] = await Promise.all([
 					getAreas(),
 					getTasks()
 				]);
 
 				setAreas(fetchedAreas as Area[]);
-
 
 				const taskToEdit = (fetchedTasks as Task[]).find((t) => t.id === taskId);
 
@@ -70,11 +65,9 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 					setDate(taskToEdit.date || "");
 					setTime(taskToEdit.time || "");
 
-
 					if (taskToEdit.priority === "Alta") setPriority("high");
 					else if (taskToEdit.priority === "Média") setPriority("medium");
 					else setPriority("low");
-
 
 					const matchedArea = (fetchedAreas as Area[]).find(a => a.color === taskToEdit.color);
 					if (matchedArea) {
@@ -83,11 +76,11 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 						setSelectedArea((fetchedAreas as Area[])[0].id);
 					}
 
-
 					if (taskToEdit.subtasks) {
 						setSubtasks(taskToEdit.subtasks.map((st) => ({
 							id: st.id,
-							title: st.name
+							title: st.name,
+							completed: st.completed || false
 						})));
 					}
 				}
@@ -101,17 +94,22 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 		loadData();
 	}, [isOpen, taskId]);
 
-
 	if (!isOpen) return null;
 
 	const handleAddSubtask = () => {
 		if (!newSubtask.trim()) return;
-		setSubtasks([...subtasks, { id: Math.random().toString(), title: newSubtask }]);
+		setSubtasks([...subtasks, { id: Math.random().toString(), title: newSubtask, completed: false }]);
 		setNewSubtask("");
 	};
 
 	const removeSubtask = (id: string) => {
 		setSubtasks(subtasks.filter((task) => task.id !== id));
+	};
+
+	const toggleSubtaskCompletion = (id: string) => {
+		setSubtasks(subtasks.map(task =>
+			task.id === id ? { ...task, completed: !task.completed } : task
+		));
 	};
 
 	const handleDeleteTask = async () => {
@@ -132,13 +130,12 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 		if (!taskId) return;
 
 		const areaColor = areas.find(a => a.id === selectedArea)?.color || "#3b82f6";
-
 		const priorityMap = { low: "Baixa", medium: "Média", high: "Alta" };
 
 		const formattedSubtasks = subtasks.map((st, index) => ({
 			id: st.id.includes("sub-") ? st.id : `sub-${Date.now()}${index}`,
 			name: st.title,
-			completed: false
+			completed: st.completed
 		}));
 
 		const updatedTaskData = {
@@ -187,7 +184,6 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 					</div>
 				) : (
 					<>
-
 						<div className="flex max-h-[70vh] flex-col gap-6 overflow-y-auto p-6 scrollbar-hide">
 
 							<input
@@ -199,7 +195,6 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 								autoFocus
 							/>
 
-
 							<textarea
 								value={description}
 								onChange={(e) => setDescription(e.target.value)}
@@ -207,7 +202,6 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 								rows={3}
 								className="w-full resize-none rounded-lg border border-gray-300 bg-transparent p-3 text-sm text-text-primary placeholder:text-gray-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-gray-700 dark:placeholder:text-gray-500 transition-colors"
 							/>
-
 
 							<div className="flex flex-col gap-4 sm:flex-row">
 								<div className="flex flex-1 flex-col gap-2">
@@ -234,9 +228,7 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 								</div>
 							</div>
 
-
 							<div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-y border-gray-100 py-6 dark:border-gray-800/60">
-
 								<div className="flex flex-col gap-3">
 									<label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
 										<Flag size={16} /> Priority
@@ -256,7 +248,6 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 										))}
 									</div>
 								</div>
-
 
 								<div className="flex flex-col gap-3">
 									<label className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -284,7 +275,6 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 								</div>
 							</div>
 
-
 							<div className="flex flex-col gap-3">
 								<label className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									Subtasks
@@ -307,12 +297,21 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 									</button>
 								</div>
 
-
 								{subtasks.length > 0 && (
 									<ul className="mt-2 flex flex-col gap-2">
 										{subtasks.map((task) => (
 											<li key={task.id} className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800/40">
-												<span className="text-text-primary">{task.title}</span>
+												<div className="flex items-center gap-3">
+													<input
+														type="checkbox"
+														checked={task.completed}
+														onChange={() => toggleSubtaskCompletion(task.id)}
+														className="h-4 w-4 cursor-pointer rounded border-gray-300 text-brand focus:ring-brand dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-[#1a1a1a]"
+													/>
+													<span className={`${task.completed ? "text-gray-400 line-through dark:text-gray-500" : "text-text-primary"}`}>
+														{task.title}
+													</span>
+												</div>
 												<button onClick={() => removeSubtask(task.id)} className="text-gray-400 hover:text-red-500">
 													<Trash2 size={16} />
 												</button>
@@ -323,16 +322,12 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 							</div>
 						</div>
 
-
 						<div className="flex items-center justify-between rounded-b-xl bg-gray-50 px-6 py-4 dark:bg-gray-800/20">
-
 							<div className="flex items-center gap-2">
 								<button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
 									<Paperclip size={18} />
 									<span className="hidden sm:inline">Attach File</span>
 								</button>
-
-
 								<button
 									onClick={handleDeleteTask}
 									className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 transition-colors"
@@ -341,7 +336,6 @@ export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModal
 									<Trash2 size={18} />
 								</button>
 							</div>
-
 
 							<div className="flex gap-3">
 								<button

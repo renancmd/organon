@@ -2,359 +2,427 @@
 
 import { useState, useEffect } from "react";
 import {
-	X, Calendar, Clock, Flag, Paperclip, Plus, Trash2, CheckCircle2
+    X, Calendar, Clock, Flag, Paperclip, Plus, Trash2, CheckCircle2
 } from "lucide-react";
 import { getAreas, getTasks, updateTask, deleteTask } from "../../services/db.service";
 
 interface Task {
-	id: string;
-	name?: string;
-	description?: string;
-	date?: string;
-	time?: string;
-	priority?: string;
-	color?: string;
-	subtasks?: { id: string; name: string; completed?: boolean }[];
+    id: string;
+    name?: string;
+    description?: string;
+    date?: string;
+    time?: string;
+    priority?: string;
+    color?: string;
+    subtasks?: { id: string; name: string; completed?: boolean; date?: string; time?: string }[];
 }
 
 interface EditTodoModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-	taskId: string | null;
+    isOpen: boolean;
+    onClose: () => void;
+    taskId: string | null;
 }
 
 type Area = {
-	id: string;
-	name: string;
-	color: string;
+    id: string;
+    name: string;
+    color: string;
 };
 
 export default function EditTodoModal({ isOpen, onClose, taskId }: EditTodoModalProps) {
 
-	const [taskName, setTaskName] = useState("");
-	const [description, setDescription] = useState("");
-	const [priority, setPriority] = useState<"low" | "medium" | "high">("low");
-	const [date, setDate] = useState("");
-	const [time, setTime] = useState("");
+    const [taskName, setTaskName] = useState("");
+    const [description, setDescription] = useState("");
+    const [priority, setPriority] = useState<"low" | "medium" | "high">("low");
+    const [date, setDate] = useState("");
+    const [time, setTime] = useState("");
 
-	const [areas, setAreas] = useState<Area[]>([]);
-	const [selectedArea, setSelectedArea] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
+    const [areas, setAreas] = useState<Area[]>([]);
+    const [selectedArea, setSelectedArea] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-	const [subtasks, setSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
-	const [newSubtask, setNewSubtask] = useState("");
+    const [subtasks, setSubtasks] = useState<{ id: string; title: string; completed: boolean; date: string; time: string }[]>([]);
+    const [newSubtask, setNewSubtask] = useState("");
+    const [newSubtaskDate, setNewSubtaskDate] = useState("");
+    const [newSubtaskTime, setNewSubtaskTime] = useState("");
 
-	useEffect(() => {
-		if (!isOpen || !taskId) return;
+    useEffect(() => {
+        if (!isOpen || !taskId) return;
 
-		const loadData = async () => {
-			setIsLoading(true);
-			try {
-				const [fetchedAreas, fetchedTasks] = await Promise.all([
-					getAreas(),
-					getTasks()
-				]);
+        const loadData = async () => {
+            setIsLoading(true);
+            try {
+                const [fetchedAreas, fetchedTasks] = await Promise.all([
+                    getAreas(),
+                    getTasks()
+                ]);
 
-				setAreas(fetchedAreas as Area[]);
+                setAreas(fetchedAreas as Area[]);
 
-				const taskToEdit = (fetchedTasks as Task[]).find((t) => t.id === taskId);
+                const taskToEdit = (fetchedTasks as Task[]).find((t) => t.id === taskId);
 
-				if (taskToEdit) {
-					setTaskName(taskToEdit.name || "");
-					setDescription(taskToEdit.description || "");
-					setDate(taskToEdit.date || "");
-					setTime(taskToEdit.time || "");
+                if (taskToEdit) {
+                    setTaskName(taskToEdit.name || "");
+                    setDescription(taskToEdit.description || "");
+                    setDate(taskToEdit.date || "");
+                    setTime(taskToEdit.time || "");
 
-					if (taskToEdit.priority === "Alta") setPriority("high");
-					else if (taskToEdit.priority === "Média") setPriority("medium");
-					else setPriority("low");
+                    if (taskToEdit.priority === "Alta") setPriority("high");
+                    else if (taskToEdit.priority === "Média") setPriority("medium");
+                    else setPriority("low");
 
-					const matchedArea = (fetchedAreas as Area[]).find(a => a.color === taskToEdit.color);
-					if (matchedArea) {
-						setSelectedArea(matchedArea.id);
-					} else if (fetchedAreas.length > 0) {
-						setSelectedArea((fetchedAreas as Area[])[0].id);
-					}
+                    const matchedArea = (fetchedAreas as Area[]).find(a => a.color === taskToEdit.color);
+                    if (matchedArea) {
+                        setSelectedArea(matchedArea.id);
+                    } else if (fetchedAreas.length > 0) {
+                        setSelectedArea((fetchedAreas as Area[])[0].id);
+                    }
 
-					if (taskToEdit.subtasks) {
-						setSubtasks(taskToEdit.subtasks.map((st) => ({
-							id: st.id,
-							title: st.name,
-							completed: st.completed || false
-						})));
-					}
-				}
-			} catch (error) {
-				console.error("Failed to load task data:", error);
-			} finally {
-				setIsLoading(false);
-			}
-		};
+                    if (taskToEdit.subtasks) {
+                        setSubtasks(taskToEdit.subtasks.map((st) => ({
+                            id: st.id,
+                            title: st.name,
+                            completed: st.completed || false,
+                            date: st.date || "",
+                            time: st.time || ""
+                        })));
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load task data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-		loadData();
-	}, [isOpen, taskId]);
+        loadData();
+    }, [isOpen, taskId]);
 
-	if (!isOpen) return null;
+    if (!isOpen) return null;
 
-	const handleAddSubtask = () => {
-		if (!newSubtask.trim()) return;
-		setSubtasks([...subtasks, { id: Math.random().toString(), title: newSubtask, completed: false }]);
-		setNewSubtask("");
-	};
+    const handleAddSubtask = () => {
+        if (!newSubtask.trim()) return;
+        setSubtasks([...subtasks, { 
+            id: Math.random().toString(), 
+            title: newSubtask, 
+            completed: false,
+            date: newSubtaskDate,
+            time: newSubtaskTime
+        }]);
+        
+        setNewSubtask("");
+        setNewSubtaskDate("");
+        setNewSubtaskTime("");
+    };
 
-	const removeSubtask = (id: string) => {
-		setSubtasks(subtasks.filter((task) => task.id !== id));
-	};
+    const removeSubtask = (id: string) => {
+        setSubtasks(subtasks.filter((task) => task.id !== id));
+    };
 
-	const toggleSubtaskCompletion = (id: string) => {
-		setSubtasks(subtasks.map(task =>
-			task.id === id ? { ...task, completed: !task.completed } : task
-		));
-	};
+    const toggleSubtaskCompletion = (id: string) => {
+        setSubtasks(subtasks.map(task =>
+            task.id === id ? { ...task, completed: !task.completed } : task
+        ));
+    };
 
-	const handleDeleteTask = async () => {
-		if (!taskId) return;
+    // NEW: Function to handle inline edits of existing subtasks
+    const updateSubtask = (id: string, field: "title" | "date" | "time", value: string) => {
+        setSubtasks(subtasks.map(task =>
+            task.id === id ? { ...task, [field]: value } : task
+        ));
+    };
 
-		const confirmDelete = window.confirm("Are you sure you want to delete this task?");
-		if (!confirmDelete) return;
+    const handleDeleteTask = async () => {
+        if (!taskId) return;
 
-		try {
-			await deleteTask(taskId);
-			onClose();
-		} catch (error) {
-			console.error("Failed to delete task:", error);
-		}
-	};
+        const confirmDelete = window.confirm("Are you sure you want to delete this task?");
+        if (!confirmDelete) return;
 
-	const handleSaveChanges = async () => {
-		if (!taskId) return;
+        try {
+            await deleteTask(taskId);
+            onClose();
+        } catch (error) {
+            console.error("Failed to delete task:", error);
+        }
+    };
 
-		const areaColor = areas.find(a => a.id === selectedArea)?.color || "#3b82f6";
-		const priorityMap = { low: "Baixa", medium: "Média", high: "Alta" };
+    const handleSaveChanges = async () => {
+        if (!taskId) return;
 
-		const formattedSubtasks = subtasks.map((st, index) => ({
-			id: st.id.includes("sub-") ? st.id : `sub-${Date.now()}${index}`,
-			name: st.title,
-			completed: st.completed
-		}));
+        const areaColor = areas.find(a => a.id === selectedArea)?.color || "#3b82f6";
+        const priorityMap = { low: "Baixa", medium: "Média", high: "Alta" };
 
-		const updatedTaskData = {
-			name: taskName,
-			description: description,
-			color: areaColor,
-			date: date,
-			time: time,
-			dueDate: date && time ? `${date}T${time}` : "",
-			priority: priorityMap[priority],
-			subtasks: formattedSubtasks
-		};
+        const formattedSubtasks = subtasks.map((st, index) => ({
+            id: st.id.includes("sub-") ? st.id : `sub-${Date.now()}${index}`,
+            name: st.title,
+            completed: st.completed,
+            date: st.date,
+            time: st.time,
+            dueDate: st.date && st.time ? `${st.date}T${st.time}` : ""
+        }));
 
-		try {
-			await updateTask(taskId, updatedTaskData);
-			onClose();
-		} catch (error) {
-			console.error("Failed to update task:", error);
-		}
-	};
+        const updatedTaskData = {
+            name: taskName,
+            description: description,
+            color: areaColor,
+            date: date,
+            time: time,
+            dueDate: date && time ? `${date}T${time}` : "",
+            priority: priorityMap[priority],
+            subtasks: formattedSubtasks
+        };
 
-	return (
-		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity"
-			onClick={onClose}
-			onKeyDown={(e) => e.key === "Escape" && onClose()}
-		>
-			<div
-				className="flex w-full max-w-2xl flex-col rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-[#1a1a1a]"
-				onClick={(e) => e.stopPropagation()}
-			>
+        try {
+            await updateTask(taskId, updatedTaskData);
+            onClose();
+        } catch (error) {
+            console.error("Failed to update task:", error);
+        }
+    };
 
-				<div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800/60">
-					<h2 className="text-xl font-bold text-text-primary">Edit Task</h2>
-					<button
-						onClick={onClose}
-						className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
-					>
-						<X size={20} />
-					</button>
-				</div>
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+            onKeyDown={(e) => e.key === "Escape" && onClose()}
+        >
+            <div
+                className="flex w-full max-w-2xl flex-col rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-[#1a1a1a]"
+                onClick={(e) => e.stopPropagation()}
+            >
 
-				{isLoading ? (
-					<div className="flex min-h-[40vh] items-center justify-center">
-						<span className="text-gray-500">Loading task details...</span>
-					</div>
-				) : (
-					<>
-						<div className="flex max-h-[70vh] flex-col gap-6 overflow-y-auto p-6 scrollbar-hide">
+                <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800/60">
+                    <h2 className="text-xl font-bold text-text-primary">Edit Task</h2>
+                    <button
+                        onClick={onClose}
+                        className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
 
-							<input
-								type="text"
-								value={taskName}
-								onChange={(e) => setTaskName(e.target.value)}
-								placeholder="What needs to be done?"
-								className="w-full bg-transparent text-2xl font-semibold text-text-primary placeholder:text-gray-400 focus:outline-none dark:placeholder:text-gray-600"
-								autoFocus
-							/>
+                {isLoading ? (
+                    <div className="flex min-h-[40vh] items-center justify-center">
+                        <span className="text-gray-500">Loading task details...</span>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex max-h-[70vh] flex-col gap-6 overflow-y-auto p-6 scrollbar-hide">
 
-							<textarea
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								placeholder="Add a description..."
-								rows={3}
-								className="w-full resize-none rounded-lg border border-gray-300 bg-transparent p-3 text-sm text-text-primary placeholder:text-gray-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-gray-700 dark:placeholder:text-gray-500 transition-colors"
-							/>
+                            <input
+                                type="text"
+                                value={taskName}
+                                onChange={(e) => setTaskName(e.target.value)}
+                                placeholder="What needs to be done?"
+                                className="w-full bg-transparent text-2xl font-semibold text-text-primary placeholder:text-gray-400 focus:outline-none dark:placeholder:text-gray-600"
+                                autoFocus
+                            />
 
-							<div className="flex flex-col gap-4 sm:flex-row">
-								<div className="flex flex-1 flex-col gap-2">
-									<label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-										<Calendar size={16} /> Date
-									</label>
-									<input
-										type="date"
-										value={date}
-										onChange={(e) => setDate(e.target.value)}
-										className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none dark:border-gray-700 [color-scheme:light] dark:[color-scheme:dark]"
-									/>
-								</div>
-								<div className="flex flex-1 flex-col gap-2">
-									<label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-										<Clock size={16} /> Time
-									</label>
-									<input
-										type="time"
-										value={time}
-										onChange={(e) => setTime(e.target.value)}
-										className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none dark:border-gray-700 [color-scheme:light] dark:[color-scheme:dark]"
-									/>
-								</div>
-							</div>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Add a description..."
+                                rows={3}
+                                className="w-full resize-none rounded-lg border border-gray-300 bg-transparent p-3 text-sm text-text-primary placeholder:text-gray-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-gray-700 dark:placeholder:text-gray-500 transition-colors"
+                            />
 
-							<div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-y border-gray-100 py-6 dark:border-gray-800/60">
-								<div className="flex flex-col gap-3">
-									<label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-										<Flag size={16} /> Priority
-									</label>
-									<div className="flex gap-2">
-										{(["low", "medium", "high"] as const).map((p) => (
-											<button
-												key={p}
-												onClick={() => setPriority(p)}
-												className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition-all ${priority === p
-													? "bg-brand text-white shadow-md"
-													: "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-													}`}
-											>
-												{p}
-											</button>
-										))}
-									</div>
-								</div>
+                            <div className="flex flex-col gap-4 sm:flex-row">
+                                <div className="flex flex-1 flex-col gap-2">
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                                        <Calendar size={16} /> Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none dark:border-gray-700 [color-scheme:light] dark:[color-scheme:dark]"
+                                    />
+                                </div>
+                                <div className="flex flex-1 flex-col gap-2">
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                                        <Clock size={16} /> Time
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={time}
+                                        onChange={(e) => setTime(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none dark:border-gray-700 [color-scheme:light] dark:[color-scheme:dark]"
+                                    />
+                                </div>
+                            </div>
 
-								<div className="flex flex-col gap-3">
-									<label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-										Life Area
-									</label>
-									<div className="flex items-center gap-3">
-										{areas.length > 0 ? (
-											areas.map((area) => (
-												<button
-													key={area.id}
-													onClick={() => setSelectedArea(area.id)}
-													title={area.name}
-													className={`flex h-8 w-8 items-center justify-center rounded-full transition-transform ${area.color} ${selectedArea === area.id
-														? "scale-110 ring-2 ring-brand ring-offset-2 dark:ring-offset-[#1a1a1a]"
-														: "hover:scale-110"
-														}`}
-												>
-													{selectedArea === area.id && <CheckCircle2 size={16} className="text-white drop-shadow-md" />}
-												</button>
-											))
-										) : (
-											<span className="text-sm italic text-gray-400">No areas found</span>
-										)}
-									</div>
-								</div>
-							</div>
+                            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-y border-gray-100 py-6 dark:border-gray-800/60">
+                                <div className="flex flex-col gap-3">
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                                        <Flag size={16} /> Priority
+                                    </label>
+                                    <div className="flex gap-2">
+                                        {(["low", "medium", "high"] as const).map((p) => (
+                                            <button
+                                                key={p}
+                                                onClick={() => setPriority(p)}
+                                                className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition-all ${priority === p
+                                                    ? "bg-brand text-white shadow-md"
+                                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                                                    }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
 
-							<div className="flex flex-col gap-3">
-								<label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-									Subtasks
-								</label>
+                                <div className="flex flex-col gap-3">
+                                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                        Life Area
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        {areas.length > 0 ? (
+                                            areas.map((area) => (
+                                                <button
+                                                    key={area.id}
+                                                    onClick={() => setSelectedArea(area.id)}
+                                                    title={area.name}
+                                                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-transform ${area.color} ${selectedArea === area.id
+                                                        ? "scale-110 ring-2 ring-brand ring-offset-2 dark:ring-offset-[#1a1a1a]"
+                                                        : "hover:scale-110"
+                                                        }`}
+                                                >
+                                                    {selectedArea === area.id && <CheckCircle2 size={16} className="text-white drop-shadow-md" />}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <span className="text-sm italic text-gray-400">No areas found</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
 
-								<div className="flex gap-2">
-									<input
-										type="text"
-										value={newSubtask}
-										onChange={(e) => setNewSubtask(e.target.value)}
-										onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
-										placeholder="Add a subtask..."
-										className="flex-1 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none dark:border-gray-700"
-									/>
-									<button
-										onClick={handleAddSubtask}
-										className="flex items-center justify-center rounded-lg bg-gray-100 px-3 py-2 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-									>
-										<Plus size={18} />
-									</button>
-								</div>
+                            <div className="flex flex-col gap-3">
+                                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                    Subtasks
+                                </label>
 
-								{subtasks.length > 0 && (
-									<ul className="mt-2 flex flex-col gap-2">
-										{subtasks.map((task) => (
-											<li key={task.id} className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800/40">
-												<div className="flex items-center gap-3">
-													<input
-														type="checkbox"
-														checked={task.completed}
-														onChange={() => toggleSubtaskCompletion(task.id)}
-														className="h-4 w-4 cursor-pointer rounded border-gray-300 text-brand focus:ring-brand dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-[#1a1a1a]"
-													/>
-													<span className={`${task.completed ? "text-gray-400 line-through dark:text-gray-500" : "text-text-primary"}`}>
-														{task.title}
-													</span>
-												</div>
-												<button onClick={() => removeSubtask(task.id)} className="text-gray-400 hover:text-red-500">
-													<Trash2 size={16} />
-												</button>
-											</li>
-										))}
-									</ul>
-								)}
-							</div>
-						</div>
+                                {/* New Subtask Input Box */}
+                                <div className="flex flex-col gap-2 rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+                                    <input
+                                        type="text"
+                                        value={newSubtask}
+                                        onChange={(e) => setNewSubtask(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
+                                        placeholder="Add a new subtask..."
+                                        className="w-full bg-transparent px-1 py-1 text-sm text-text-primary focus:outline-none"
+                                    />
+                                    
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="date"
+                                            value={newSubtaskDate}
+                                            onChange={(e) => setNewSubtaskDate(e.target.value)}
+                                            className="flex-1 rounded-md border border-gray-300 bg-transparent px-2 py-1.5 text-xs text-text-primary focus:border-brand focus:outline-none dark:border-gray-700 [color-scheme:light] dark:[color-scheme:dark]"
+                                        />
+                                        <input
+                                            type="time"
+                                            value={newSubtaskTime}
+                                            onChange={(e) => setNewSubtaskTime(e.target.value)}
+                                            className="flex-1 rounded-md border border-gray-300 bg-transparent px-2 py-1.5 text-xs text-text-primary focus:border-brand focus:outline-none dark:border-gray-700 [color-scheme:light] dark:[color-scheme:dark]"
+                                        />
+                                        <button
+                                            onClick={handleAddSubtask}
+                                            className="flex items-center justify-center rounded-md bg-brand px-3 py-1.5 text-white shadow-sm hover:opacity-90 transition-opacity"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                </div>
 
-						<div className="flex items-center justify-between rounded-b-xl bg-gray-50 px-6 py-4 dark:bg-gray-800/20">
-							<div className="flex items-center gap-2">
-								<button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
-									<Paperclip size={18} />
-									<span className="hidden sm:inline">Attach File</span>
-								</button>
-								<button
-									onClick={handleDeleteTask}
-									className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 transition-colors"
-									title="Delete Task"
-								>
-									<Trash2 size={18} />
-								</button>
-							</div>
+                                {/* List of Existing Subtasks (Now Editable) */}
+                                {subtasks.length > 0 && (
+                                    <ul className="mt-2 flex flex-col gap-2">
+                                        {subtasks.map((task) => (
+                                            <li key={task.id} className="flex flex-col gap-2 rounded-md bg-gray-50 px-3 py-3 dark:bg-gray-800/40">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex flex-1 items-center gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={task.completed}
+                                                            onChange={() => toggleSubtaskCompletion(task.id)}
+                                                            className="h-4 w-4 cursor-pointer rounded border-gray-300 text-brand focus:ring-brand dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-[#1a1a1a] flex-shrink-0"
+                                                        />
+                                                        {/* Editable Title */}
+                                                        <input 
+                                                            type="text"
+                                                            value={task.title}
+                                                            onChange={(e) => updateSubtask(task.id, 'title', e.target.value)}
+                                                            className={`flex-1 bg-transparent text-sm focus:outline-none focus:border-b focus:border-brand ${task.completed ? "text-gray-400 line-through dark:text-gray-500" : "text-text-primary font-medium"}`}
+                                                        />
+                                                    </div>
+                                                    <button onClick={() => removeSubtask(task.id)} className="text-gray-400 hover:text-red-500 flex-shrink-0">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                                
+                                                {/* Editable Date and Time */}
+                                                <div className="flex items-center gap-2 pl-7">
+                                                    <div className="flex flex-1 items-center gap-1">
+                                                        <Calendar size={12} className="text-gray-400" />
+                                                        <input
+                                                            type="date"
+                                                            value={task.date || ""}
+                                                            onChange={(e) => updateSubtask(task.id, 'date', e.target.value)}
+                                                            className="w-full rounded bg-transparent px-1 py-1 text-xs text-gray-500 focus:bg-white dark:focus:bg-[#1a1a1a] focus:ring-1 focus:ring-brand focus:outline-none [color-scheme:light] dark:[color-scheme:dark] transition-colors"
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-1 items-center gap-1">
+                                                        <Clock size={12} className="text-gray-400" />
+                                                        <input
+                                                            type="time"
+                                                            value={task.time || ""}
+                                                            onChange={(e) => updateSubtask(task.id, 'time', e.target.value)}
+                                                            className="w-full rounded bg-transparent px-1 py-1 text-xs text-gray-500 focus:bg-white dark:focus:bg-[#1a1a1a] focus:ring-1 focus:ring-brand focus:outline-none [color-scheme:light] dark:[color-scheme:dark] transition-colors"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
 
-							<div className="flex gap-3">
-								<button
-									onClick={onClose}
-									className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
-								>
-									Cancel
-								</button>
-								<button
-									onClick={handleSaveChanges}
-									className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
-								>
-									Save Changes
-								</button>
-							</div>
-						</div>
-					</>
-				)}
-			</div>
-		</div>
-	);
+                        <div className="flex items-center justify-between rounded-b-xl bg-gray-50 px-6 py-4 dark:bg-gray-800/20">
+                            <div className="flex items-center gap-2">
+                                <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
+                                    <Paperclip size={18} />
+                                    <span className="hidden sm:inline">Attach File</span>
+                                </button>
+                                <button
+                                    onClick={handleDeleteTask}
+                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 transition-colors"
+                                    title="Delete Task"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={onClose}
+                                    className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveChanges}
+                                    className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
 } 
